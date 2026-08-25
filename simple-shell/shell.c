@@ -15,23 +15,19 @@ int    sh_help(char**);
 int    sh_exit(char**);
 /**********************/
 
-
 int    sh_num_builtin();
 char** readtok(char*);
-char*  readlines();
+char*  readline();
 int    sh_launch(char**);
 int    sh_execute(char**);
 void   sh_loop(void);
 
-
 char*  line;			/* line of commands */
 char** args;			/* arguments parsed from the line */
 int    status;			/* status of the program */
-
 /*
   List of builtin commands, followed by their corresponding functions.
  */
-
 char* builtin_str[] = 
 {	
 	"cd",
@@ -46,6 +42,9 @@ int (*builtin_func[])(char**) =
 	&sh_exit
 };
 
+// SIGNALS
+int  signal_terminate = 0;
+
 
 int main()
 {
@@ -57,11 +56,9 @@ int sh_num_builtin()
 {
 	return sizeof(builtin_str) / sizeof(char *);
 }
-
 /*
  BUILT_IN FUNCTIONS IMPLIMINTATION
  */
-
 int sh_cd(char** args)
 {
 	if(args[1] == NULL){
@@ -161,7 +158,7 @@ char* readline()
 		}
 		if(bufp >= bufsize){				/* if the buffer position get exceeded , realloc*/
 			bufsize += BUFFER_SIZE;
-			buf = realloc(buf,sizeof(char) * BUFFER_SIZE);	
+			buf = realloc(buf,sizeof(char) * bufsize);	
 			if(!buf){
 				fprintf(stderr,"realloc: failed allocation...\n");
 				exit(EXIT_FAILURE);
@@ -173,7 +170,7 @@ char* readline()
 char** readtok(char* line)
 {
 	int    bufsize = TOK_BUFF_SIZE , position = 0;
-	char** tokens  = malloc(bufsize * sizeof(char)); 	/* Storing tokens to use them after */
+	char** tokens  = malloc(bufsize * sizeof(char*)); 	/* Storing tokens to use them after */
 	char*  token;						/* Storing tokens from strtok() */
 
 	if( !tokens){
@@ -189,7 +186,7 @@ char** readtok(char* line)
 	
 		if(position >= bufsize){			/* Checking for limits */
 			bufsize += TOK_BUFF_SIZE;
-			tokens = realloc(tokens,bufsize * sizeof(char));
+			tokens = realloc(tokens,bufsize * sizeof(char*));
 			if( !tokens){
 				fprintf(stderr, "malloc : failed allocation...!\n");
 				exit( EXIT_FAILURE);
@@ -211,6 +208,10 @@ void sh_loop()
 		args = readtok(line);		/* tokenize the line to arguments */
 		status = sh_execute(args);	/* status of the program to continue performing or no */
 
+		if(signal_terminate == 1){
+			// EOF
+			return ;
+		}
 		free(line);
 		free(args);
 	}while(status);
