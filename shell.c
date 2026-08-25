@@ -15,6 +15,7 @@ int    sh_help(char**);
 int    sh_exit(char**);
 /**********************/
 
+
 int    sh_num_builtin();
 char** readtok(char*);
 char*  readlines();
@@ -22,12 +23,15 @@ int    sh_launch(char**);
 int    sh_execute(char**);
 void   sh_loop(void);
 
+
 char*  line;			/* line of commands */
 char** args;			/* arguments parsed from the line */
 int    status;			/* status of the program */
+
 /*
   List of builtin commands, followed by their corresponding functions.
  */
+
 char* builtin_str[] = 
 {	
 	"cd",
@@ -42,9 +46,6 @@ int (*builtin_func[])(char**) =
 	&sh_exit
 };
 
-// SIGNALS
-int  signal_terminate = 0;
-
 
 int main()
 {
@@ -56,9 +57,11 @@ int sh_num_builtin()
 {
 	return sizeof(builtin_str) / sizeof(char *);
 }
+
 /*
  BUILT_IN FUNCTIONS IMPLIMINTATION
  */
+
 int sh_cd(char** args)
 {
 	if(args[1] == NULL){
@@ -208,10 +211,6 @@ void sh_loop()
 		args = readtok(line);		/* tokenize the line to arguments */
 		status = sh_execute(args);	/* status of the program to continue performing or no */
 
-		if(signal_terminate == 1){
-			// EOF
-			return ;
-		}
 		free(line);
 		free(args);
 	}while(status);
