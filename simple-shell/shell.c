@@ -15,16 +15,16 @@ int    sh_help(char**);
 int    sh_exit(char**);
 /**********************/
 
-int    sh_num_builtin();
-char** readtok(char*);
-char*  readline();
-int    sh_launch(char**);
-int    sh_execute(char**);
-void   sh_loop(void);
+int    sh_num_builtin();	/* How many builtin functions are there*/
+char** readtok(char*);		/* Tokenize the line read */
+char*  readline();		/* Read line of input from user */
+int    sh_launch(char**);	/* Launch the shell if the input does not include builtin commands */
+int    sh_execute(char**);	/* Execute builtin commands */
+void   sh_loop(void);		/* Shell's main LOOP  */
 
-char*  line;			/* line of commands */
-char** args;			/* arguments parsed from the line */
-int    status;			/* status of the program */
+char*  line;			/* Line of commands */
+char** args;			/* Arguments parsed from the line */
+int    status;			/* Status of the program */
 /*
   List of builtin commands, followed by their corresponding functions.
  */
@@ -41,9 +41,6 @@ int (*builtin_func[])(char**) =
 	&sh_help,
 	&sh_exit
 };
-
-// SIGNALS
-int  signal_terminate = 0;
 
 
 int main()
