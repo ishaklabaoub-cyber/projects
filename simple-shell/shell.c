@@ -25,6 +25,7 @@ void   sh_loop(void);		/* Shell's main LOOP  */
 char*  line;			/* Line of commands */
 char** args;			/* Arguments parsed from the line */
 int    status;			/* Status of the program */
+int    signal_terminate = 0;
 /*
   List of builtin commands, followed by their corresponding functions.
  */
