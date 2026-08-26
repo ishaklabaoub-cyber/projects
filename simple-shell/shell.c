@@ -203,13 +203,14 @@ void sh_loop()
 		printf("My shell> ");
 		
 		line = readline();		/* Get line from user */
+		if(signal_terminate == 1){
+			// EOF
+			free(line);
+			return ;
+		}
 		args = readtok(line);		/* tokenize the line to arguments */
 		status = sh_execute(args);	/* status of the program to continue performing or no */
 
-		if(signal_terminate == 1){
-			// EOF
-			return ;
-		}
 		free(line);
 		free(args);
 	}while(status);
