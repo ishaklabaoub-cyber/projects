@@ -41,11 +41,14 @@ int main()
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);	
 		if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
+			printf("INVALID IP ADDRESS : %s\n",input_addr);
 			perror("inet_pton");
 			close(socket_fd);
 			return 1;
 		}
 
+		/***************** must add the poll() function for non-blocking sockets*******************/ 
+		
 		if( connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) == -1){	/* trying to connect */
 			// connect() failed
 		 	perror("connect");
