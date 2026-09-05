@@ -47,7 +47,7 @@ int main()
 			// socket() failed
 			perror("socket");
 			close(socket_fd);
-			return 1;
+			continue;
 		}
 
 		addr.sin_family = AF_INET;
@@ -56,7 +56,6 @@ int main()
 			printf("INVALID IP ADDRESS : %s\n",input_addr);
 			perror("inet_pton");
 			close(socket_fd);
-			return 1;
 		}
 
 		/***************** must add the poll() function for non-blocking sockets*******************/ 
@@ -67,13 +66,14 @@ int main()
 		
 		errno = 0;
 		int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		/* trying to connect */
+		
 		if(ret == -1){
 			int current_error = errno;
 			if(expected_error == current_error){	// connection in progress
 
 				int return_val_poll = poll(&pfd, 1, 300);
 				if(pfd.revents & POLLOUT){	// the socket is writable
-
+					
 					if(getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1){
 						// getsockopt() failed
 						perror("getsockopt");
@@ -92,7 +92,7 @@ int main()
 							
 							printf("network is unreachable.\n");
 						} else{
-							printf("some error\n");			/*****************************FIIIIIIIIIIIIIIIIIXXXXXXXXXXX**********/
+							printf("some error\n");			/***************************** FIIIIIIIIIIIIIIIIIXXXXXXXXXXX **********/
 						}
 					}
 
