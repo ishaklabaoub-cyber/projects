@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/poll.h>
 
 int is_valid_ipv4(const char*);
 
@@ -12,6 +13,7 @@ int main()
 	int port_min = 0, port_max = 65535;	/* port interval */
 	int socket_fd;				/* socket file descriptor */
 	struct sockaddr_in addr;		/* ip address */
+	struct pollfd pfd;
 	
 	do{		// Getting IP address
 		printf("Please Enter IPv4 address that you want to scan: ");
@@ -23,11 +25,15 @@ int main()
 	do{		// Getting port range
 		printf("\nUsage : <int>-<int> (example : 20-80)\n");
 		printf("Please Enter the range of ports: ");
-		scanf("%d-%d", &port_min, &port_max);
+		if( scanf(" %d-%d", &port_min, &port_max) != 2){
+			printf("scanf: FAILED\n");
+			port_min = -1;
+			port_max = 65536;
+		}
 
-	}while((port_min < 0 || port_max > 65535 ) && port_min > port_max);
+	}while((port_min < 0 && port_max > 65535 ) || port_min > port_max);
 	
-	
+
 	for(int port = port_min; port <= port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -48,18 +54,23 @@ int main()
 		}
 
 		/***************** must add the poll() function for non-blocking sockets*******************/ 
-		
+		pfd.fd = socket_fd;
+		pfd.events = POLLOUT;
+		pfd.revents = 0;
+
 		if( connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in)) == -1){	/* trying to connect */
 			// connect() failed
 		 	perror("connect");
 			close(socket_fd);
-			return 1;
 		} else{
-			printf("port %d is open on %s\n\n", port, input_addr);
+			poll(&pfd, 1, 1000);
+			if(pfd.revents & POLLOUT){
+				printf("port %d is open on %s\n\n", port, input_addr);
+			}
+			close(socket_fd);
 		}
 		
 	}
-	close(socket_fd);
 
 	return 0;
 }
