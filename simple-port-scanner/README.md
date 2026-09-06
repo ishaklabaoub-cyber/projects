@@ -24,7 +24,10 @@
 - Reading manual pages sometimes get hard especially tracking the errors and flags but you have to be patient with it that's all.
 
 ## USAGE:
-- Compile with: gcc -Wall -Wextra -Werror  simple-port-scanner.c   -o simple-port-scanner
+- Compile with: 
+'''
+gcc -Wall -Wextra -Werror  simple-port-scanner.c   -o simple-port-scanner
+'''
 - when running the program: 
 1. Please enter a valid IPv4 address of the target you want to scan.
 2. Enter a port range to scan.
