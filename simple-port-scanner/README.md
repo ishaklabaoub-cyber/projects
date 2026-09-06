@@ -9,7 +9,7 @@
 4. Practicing more on the C language and getting more experienced.
 
 **HOW IT WORKS**:
-- After getting the valid IP address of the target that the user want to scan AND the valid port range of the scan, then the program creates successfully an end-point for communication using socket() function, after that i used the connect() + poll() combo for a non-blocking sockets rather than a blocking-sockets because of the speed, the blocking-sockets connects would make a full port range scan painfully slow.
+- After getting the valid IP address of the target that the user want to scan AND the valid port range of the scan, then the program creates successfully an end-point for a communication using socket() function, after that i used the connect() + poll() combo for a non-blocking sockets rather than a blocking-sockets because of the speed, the blocking-sockets connects would make a full port range scan painfully slow.
 
 **KNOWN LIMITATIONS**:
 - This program supports only the IPv4 address family.
@@ -18,7 +18,7 @@
 
 ***key notes***:
 - I learned a lot of new functions and concepts in this project including the socket API especially the non-blocking socket, where i learned the poll() function and it's concepts like the POLLOUT flag that shows just the writability of the socket so you got to check with getsockopt() function to identify the states of the connection.
-- Reading manual pages sometimes get hard especially the errors and flags but you have to be patient with it that's all.
+- Reading manual pages sometimes get hard especially tracking the errors and flags but you have to be patient with it that's all.
 
 ***USAGE***:
 - Compile with: gcc -Wall -Wextra -Werror  simple-port-scanner.c   -o simple-port-scanner
