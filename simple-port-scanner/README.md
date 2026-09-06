@@ -1,5 +1,5 @@
 **Description**:
-- This is a CLI TCP port scanner written in C language using non-blocking sockets.
+- This is a CLI simple TCP port scanner written in C language using non-blocking sockets.
 
 **WHY I BUILT IT**:
 - For several reasons :
