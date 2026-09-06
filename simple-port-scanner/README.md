@@ -12,7 +12,7 @@
 (1) validate IP/port input.
 (2) create socket.
 (3) non-blocking connect.
-(4) poll + getsockopt to resolve final state.
+(4) `poll` + `getsockopt` to resolve final state.
 
 ## KNOWN LIMITATIONS:
 - This program supports only the IPv4 address family.
@@ -20,7 +20,7 @@
 - Some errno cases beyond ECONNREFUSED/ETIMEDOUT/ENETUNREACH aren't distinguished yet.
 
 ## key notes:
-- I learned a lot of new functions and concepts in this project including the socket API especially the non-blocking socket, where i learned the poll() function and its concepts like the POLLOUT flag that shows just the writability of the socket so you got to check with getsockopt() function to identify the states of the connection.
+- I learned a lot of new functions and concepts in this project including the socket API especially the non-blocking socket, where i learned the `poll()` function and its concepts like the POLLOUT flag that shows just the writability of the socket so you got to check with `getsockopt()` function to identify the states of the connection.
 - Reading manual pages sometimes get hard especially tracking the errors and flags but you have to be patient with it that's all.
 
 ## USAGE:
