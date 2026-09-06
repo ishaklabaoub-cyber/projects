@@ -34,4 +34,4 @@ Please Enter the range of ports: 20-100
 
 3. Results will pop up in your terminal
 
-***HAVE FUN SCANNING***
+***HAVE FUN SCANNING :)***
