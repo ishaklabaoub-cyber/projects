@@ -31,6 +31,7 @@ gcc -Wall -Wextra -Werror  simple-port-scanner.c   -o simple-port-scanner
 - when running the program: 
 1. Please enter a valid IPv4 address of the target you want to scan.
 2. Enter a port range to scan.
+
 Example:
 ``` 
 Please Enter IPv4 address that you want to scan: 192.168.1.1
