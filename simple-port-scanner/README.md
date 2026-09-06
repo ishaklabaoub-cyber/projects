@@ -9,8 +9,6 @@
 4. Practicing more on the C language and getting more experienced.
 
 ## HOW IT WORKS:
-- After getting the valid IP address of the target that the user wants to scan, the valid port range of the scan, then the program creates successfully an end-point for a communication using socket() function, after that i used the connect() + poll() combo for a non-blocking sockets rather than a blocking-sockets because of the speed, the blocking-sockets connects would make a full port range scan painfully slow.
-
 (1) validate IP/port input.
 (2) create socket.
 (3) non-blocking connect.
