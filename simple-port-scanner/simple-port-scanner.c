@@ -17,7 +17,7 @@ int main()
 	int socket_fd;				/* socket file descriptor */
 	struct sockaddr_in addr;		/* ip address */
 	struct pollfd pfd;			/* for a non-blocking socket */
-	int    expected_error = EINPROGRESS;
+	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
 	int    err;
 	socklen_t len = sizeof(err);
 	
@@ -60,7 +60,7 @@ int main()
 
 		/***************** must add the poll() function for non-blocking sockets*******************/ 
 		fcntl(socket_fd, F_SETFL, O_NONBLOCK);
-		pfd.fd = socket_fd;
+		pfd.fd = socket_fd;	
 		pfd.events = POLLOUT;
 		pfd.revents = 0;
 		
@@ -92,7 +92,7 @@ int main()
 							
 							printf("network is unreachable.\n");
 						} else{
-							printf("some error\n");			/***************************** FIIIIIIIIIIIIIIIIIXXXXXXXXXXX **********/
+							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
 						}
 					}
 
