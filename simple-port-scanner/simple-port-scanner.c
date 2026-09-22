@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -28,10 +27,12 @@ int main()
 	}while(is_valid_ipv4(input_addr) == 0);
 	
 	printf("%s is a valid IPv4 address\n",input_addr);
-	do{		// Getting port range
+	
+    do{		// Getting port range
 		printf("\nUsage : <int>-<int> (example : 20-80)\n");
 		printf("Please Enter the range of ports: ");
-		if( scanf(" %d-%d", &port_min, &port_max) != 2){
+		
+        if( scanf(" %d-%d", &port_min, &port_max) != 2){
 			printf("scanf: FAILED\n");
 			port_min = -1;
 			port_max = 65536;
