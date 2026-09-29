@@ -6,12 +6,11 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
-int is_valid_ipv4(const char*);
+static int is_valid_ipv4(const char*);
+char *getting_ipaddr(char *arg);
 
-
-int main()
+int main(int argc, char *argv[])
 {
-
 	char input_addr[16];			/* to store the ip address from the user */
 	int port_min = 0, port_max = 65535;	/* port interval */
 	int socket_fd;				/* socket file descriptor */
@@ -21,11 +20,18 @@ int main()
 	int    err;
 	socklen_t len = sizeof(err);
 	
-	do{		// Getting IP address
+	/*do{		// Getting IP address
 		printf("Please Enter IPv4 address that you want to scan: ");
 		scanf("%15s", input_addr);
 	
-	}while(is_valid_ipv4(input_addr) == 0);
+	}while(is_valid_ipv4(input_addr) == 0);*/
+    if (argc >= 2) {
+        if (is_valid_ipv4(argv[1])) {
+            printf("IP address passed is invalid.\n");
+            printf("Usage: %s <ipaddr> ...\n", argv[0]);
+            printf("For options: %s --help", argv[0]);
+        }
+    }
 	
 	printf("%s is a valid IPv4 address\n",input_addr);
 	
@@ -128,4 +134,9 @@ int is_valid_ipv4(const char *src)
 		return 1;
 	}
 	return 0;
+}
+
+char *getting_ipaddr(char *arg)
+{
+    
 }
