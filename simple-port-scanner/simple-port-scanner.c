@@ -8,6 +8,7 @@
 
 static int is_valid_ipv4(const char*);
 char *getting_ipaddr(char *arg);
+void help_options();
 
 int main(int argc, char *argv[])
 {
@@ -25,12 +26,17 @@ int main(int argc, char *argv[])
 		scanf("%15s", input_addr);
 	
 	}while(is_valid_ipv4(input_addr) == 0);*/
+    
+
+    /********************** CHANGING , SO THE INPUT IS GET FROM THE PROGRAM'S ARGUMENTS **********************/
     if (argc >= 2) {
         if (is_valid_ipv4(argv[1])) {
             printf("IP address passed is invalid.\n");
             printf("Usage: %s <ipaddr> ...\n", argv[0]);
             printf("For options: %s --help", argv[0]);
+            return 1;
         }
+
     }
 	
 	printf("%s is a valid IPv4 address\n",input_addr);
@@ -124,6 +130,11 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+}
+void help_options() 
+{
+    printf("\t\t***HELP is COMING***\nIshak's port scanner options:");
+    printf("-p <int> <int> for specifying port ranges.");
 }
 
 int is_valid_ipv4(const char *src)
