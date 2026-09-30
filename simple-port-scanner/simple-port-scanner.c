@@ -1,4 +1,6 @@
+#include <netinet/in.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
@@ -6,8 +8,22 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
+
+char *options[2] = {
+    "-p",
+    "--help"
+};
+
+int (*option_func[])() = 
+{
+    &port_range,
+    &help_options
+};
+
+
 static int is_valid_ipv4(const char*);
 char *getting_ipaddr(char *arg);
+static int check_option(char *);
 void help_options();
 
 int main(int argc, char *argv[])
@@ -35,6 +51,16 @@ int main(int argc, char *argv[])
             printf("Usage: %s <ipaddr> ...\n", argv[0]);
             printf("For options: %s --help", argv[0]);
             return 1;
+        } else{
+            // VALID ip address
+            input_addr = argv[1];
+        }
+
+        for (int i = 2; i < argc; ++i) {
+            if(argv[i][0] == '-') {
+                    check_option(argv[i]);
+            }
+                
         }
 
     }
@@ -131,6 +157,13 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
+
+int  check_option(char *arg)
+{
+    
+}
+
 void help_options() 
 {
     printf("\t\t***HELP is COMING***\nIshak's port scanner options:");
