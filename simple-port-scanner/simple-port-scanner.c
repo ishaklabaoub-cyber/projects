@@ -56,10 +56,10 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (!is_valid_ipv4(argv[1])) {
+        if (is_valid_ipv4(argv[1]) != 1) {
             printf("IP address passed is invalid.\n");
             printf("Usage: %s <ipaddr> ...\n", argv[0]);
-            printf("For options: %s --help", argv[0]);
+            printf("For options: %s --help\n", argv[0]);
             return 1;
         } else{
             // VALID ip address
@@ -201,10 +201,7 @@ int is_valid_ipv4(const char *src)
 {
 	struct sockaddr_in dst;
 
-	if(inet_pton(AF_INET, src, &dst) == 1){
-		return 1;
-	}
-	return 0;
+	return inet_pton(AF_INET, src, &dst);
 }
 int parsing_func(int argc, char *argv[])
 {
