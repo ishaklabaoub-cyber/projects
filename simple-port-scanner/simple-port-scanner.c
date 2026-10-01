@@ -35,7 +35,7 @@ void (*option_func[])() =
 int main(int argc, char *argv[])
 {
 	char *input_addr;			/* to store the ip address from the user */
-	int port_min = 0, port_max = 65535;	/* port interval */
+	int port_min = 1, port_max = 65535;	/* port interval */
 	int socket_fd;				/* socket file descriptor */
 	struct sockaddr_in addr;		/* ip address */
 	struct pollfd pfd;			/* for a non-blocking socket */
