@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        if (is_valid_ipv4(argv[1])) {
+        if (!is_valid_ipv4(argv[1])) {
             printf("IP address passed is invalid.\n");
             printf("Usage: %s <ipaddr> ...\n", argv[0]);
             printf("For options: %s --help", argv[0]);
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
         }
     }
 	
-	//printf("%s is a valid IPv4 address\n",input_addr);
+	printf("%s is a valid IPv4 address\n",input_addr);
 	
     do{		// Getting port range
 		printf("\nUsage : <int>-<int> (example : 20-80)\n");
@@ -192,7 +192,7 @@ char  check_option(char *arg)
 
 void help_options() 
 {
-    printf("\t\t***HELP is COMING***\nIshak's port scanner options:");
+    printf("\t\t***HELP is COMING***\nIshak's port scanner options:\n");
     printf("-p <int> <int> for specifying port ranges.\n");
     printf("...\n");
 }
