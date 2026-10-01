@@ -1,5 +1,6 @@
 #include <netinet/in.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -8,27 +9,32 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
+#define MAX_CAP 100
+
+
+
+/****** UTILS FUNCTIONS *****/
+static int is_valid_ipv4(const char*);
+static char check_option(char *);         // RETURN THE OPTION CHARACTER
+void help_options();                    // DISPLAYING OPTIONS
+int  parsing_func(int, char *[]);
+void executing_option(char);
 
 char *options[2] = {
-    "-p",
-    "--help"
+    "h",
+    NULL
 };
 
-int (*option_func[])() = 
+void (*option_func[])() = 
 {
-    &port_range,
     &help_options
 };
 
 
-static int is_valid_ipv4(const char*);
-char *getting_ipaddr(char *arg);
-static int check_option(char *);
-void help_options();
 
 int main(int argc, char *argv[])
 {
-	char input_addr[16];			/* to store the ip address from the user */
+	char *input_addr;			/* to store the ip address from the user */
 	int port_min = 0, port_max = 65535;	/* port interval */
 	int socket_fd;				/* socket file descriptor */
 	struct sockaddr_in addr;		/* ip address */
@@ -46,6 +52,10 @@ int main(int argc, char *argv[])
 
     /********************** CHANGING , SO THE INPUT IS GET FROM THE PROGRAM'S ARGUMENTS **********************/
     if (argc >= 2) {
+        if(parsing_func(argc, argv) == 1){
+            return 1;
+        }
+
         if (is_valid_ipv4(argv[1])) {
             printf("IP address passed is invalid.\n");
             printf("Usage: %s <ipaddr> ...\n", argv[0]);
@@ -55,17 +65,9 @@ int main(int argc, char *argv[])
             // VALID ip address
             input_addr = argv[1];
         }
-
-        for (int i = 2; i < argc; ++i) {
-            if(argv[i][0] == '-') {
-                    check_option(argv[i]);
-            }
-                
-        }
-
     }
 	
-	printf("%s is a valid IPv4 address\n",input_addr);
+	//printf("%s is a valid IPv4 address\n",input_addr);
 	
     do{		// Getting port range
 		printf("\nUsage : <int>-<int> (example : 20-80)\n");
@@ -158,16 +160,41 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-
-int  check_option(char *arg)
+void executing_option(char option) 
 {
-    
+       for(int i = 0;options[i] != NULL; ++i) {
+           if(option == options[i][0]) {
+            return (*option_func[i])();
+           }
+       }
+       fprintf(stderr, "Invalid option entered\n");
+}
+
+char  check_option(char *arg)
+{
+    char option[MAX_CAP];
+    int j = 0;
+    if(arg[1] == '-') {
+        for(int i = 2; isalpha(arg[i]) && j < MAX_CAP; ++i) {
+            option[j++] = arg[i];
+        }
+        option[j] = '\0';
+        if(strcmp(option, "help") != 0)
+            return 0;
+    } else if(isalpha(arg[1]) && arg[1] != 'h') {
+        option[0] = arg[1];
+        option[1] = '\0';
+    } else {
+        return 0;
+    }
+    return option[0];
 }
 
 void help_options() 
 {
     printf("\t\t***HELP is COMING***\nIshak's port scanner options:");
-    printf("-p <int> <int> for specifying port ranges.");
+    printf("-p <int> <int> for specifying port ranges.\n");
+    printf("...\n");
 }
 
 int is_valid_ipv4(const char *src)
@@ -179,8 +206,22 @@ int is_valid_ipv4(const char *src)
 	}
 	return 0;
 }
-
-char *getting_ipaddr(char *arg)
+int parsing_func(int argc, char *argv[])
 {
-    
+    char option;
+    for(int i = 1, j;i < argc; ++i) {
+        j = 0;
+        while(isspace(argv[i][j++]))          // skipping white spaces
+            ;
+        
+        if(argv[i][0] == '-') {
+            if((option = check_option(argv[i])) == 0) {
+                fprintf(stderr, "Invalid option.\n");
+                printf("Usage: %s --help for options.\n", argv[0]);
+                return 1;
+            }
+            executing_option(option);
+        }
+    }
+    return 0;
 }
