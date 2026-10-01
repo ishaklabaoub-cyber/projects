@@ -58,6 +58,11 @@ int main(int argc, char *argv[])
             // VALID ip address
             input_addr = argv[1];
         }
+    } else{
+        fprintf(stderr, "too few arguments.");
+        printf("Usage: %s <ipaddr> ...\n", argv[0]);
+        printf("For options: %s --help\n", argv[0]);
+        return 1;
     }
 	
 	printf("%s is a valid IPv4 address\n",input_addr);
