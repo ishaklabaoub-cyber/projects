@@ -43,13 +43,6 @@ int main(int argc, char *argv[])
 	int    err;
 	socklen_t len = sizeof(err);
 	
-	/*do{		// Getting IP address
-		printf("Please Enter IPv4 address that you want to scan: ");
-		scanf("%15s", input_addr);
-	
-	}while(is_valid_ipv4(input_addr) == 0);*/
-    
-
     /********************** CHANGING , SO THE INPUT IS GET FROM THE PROGRAM'S ARGUMENTS **********************/
     if (argc >= 2) {
         if(parsing_func(argc, argv) == 1){
@@ -192,7 +185,7 @@ char  check_option(char *arg)
 
 void help_options() 
 {
-    printf("\t\t***HELP is COMING***\nIshak's port scanner options:\n");
+    printf("\n\t\t***HELP is COMING***\nIshak's port scanner options:\n");
     printf("-p <int> <int> for specifying port ranges.\n");
     printf("...\n");
 }
