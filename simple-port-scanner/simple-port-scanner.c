@@ -22,7 +22,7 @@
 
 
 /*
- * TODO: fix the port range function and the ip adress input stream
+ * TODO: fix the port range function and the ip adress input stream and check portmax-min
  */
 
 
