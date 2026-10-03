@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
 	int    err;
 	socklen_t len = sizeof(err);
 	
-    /********************** CHANGING , SO THE INPUT IS GET FROM THE PROGRAM'S ARGUMENTS **********************/
     if (argc >= 2) {
         for(int i = 1;i < argc; ++i) {
             if (is_valid_ipv4(argv[i]) != 1) {
@@ -84,9 +83,9 @@ int main(int argc, char *argv[])
                 printf("For options: %s --help\n", argv[0]);
                 return 1;
             } else{
-            // VALID ip address
-            input_addr = argv[i];
-            i++;
+                // VALID ip address
+                input_addr = argv[i];
+                i++;
             }  
 
             if(parsing_func(argv[i], &cofg, &option) == 1){
@@ -94,7 +93,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
             /* if the option takes arguments pass the next CL argument */
-            printf("\t\t1DEBUG: option[%s]\n", option);
+            printf("\t\tmain DEBUG: takes_arg[%d]\n", cofg.takes_args);
             int ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
             if(ret == 1) {
                 // the program needs to exit
@@ -103,15 +102,6 @@ int main(int argc, char *argv[])
                 // error occurred the program must exit
                 return 1;
             }
-        }
-        if (is_valid_ipv4(argv[1]) != 1) {
-            printf("IP address passed is invalid.\n");
-            printf("Usage: %s <ipaddr> ...\n", argv[0]);
-            printf("For options: %s --help\n", argv[0]);
-            return 1;
-        } else{
-            // VALID ip address
-            input_addr = argv[1];
         }
     } else{
         fprintf(stderr, "too few arguments.");
@@ -133,7 +123,6 @@ int main(int argc, char *argv[])
 
 	}while(port_min < 0 || port_max > 65535  || port_min > port_max);*/
 	
-    printf("\t\t DEBUG: portmin[%ld] portmax[%ld]",cofg.port_min,cofg.port_max);
 	for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -224,8 +213,9 @@ int exec_opt(char *option, char *arg, struct config *cofg)
            if(strcmp(option,opt_prop[i].long_name) == 0) 
            {
                free(option);
-               return (opt_prop[i].takes_args) ? opt_prop[i].handler("do not need args", cofg) : 
-                                                 opt_prop[i].handler(arg, cofg);
+               printf("\t\texec DEBUG: takes_arg[%d]\n", opt_prop[i].takes_args);
+               //return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
+                                                 opt_prop[i].handler("do not need args", cofg);
            }
        }
     } else{
@@ -280,6 +270,9 @@ int  port_ran(const char *arg, struct config *cfg)
         fprintf(stderr, "port_ran: passed an empty arg.\n");
         return -1;
     }
+   
+    printf("\t\tDEBUG: arg[%s]\n", arg);
+    
     long p_max,p_min;
     char *str = strdup(arg);
     char *tokens[2];
@@ -292,7 +285,6 @@ int  port_ran(const char *arg, struct config *cfg)
         tokens[i++] = str;    
         strtok(NULL, TOK_DELIM);
     }
-    printf("\t\tDEBUG: i[%d]\n",i);
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
@@ -336,17 +328,16 @@ int parsing_func(char *argv, struct config *cofg, char **option)
         if(argv[0] == '-') {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
-                printf("\t\t2DEBUG: option[%s]\n", *option);
                 free(option);
                 return 1;
             }
-            printf("\t\t3DEBUG: option[%s]\n", *option);
             for(int i = 0;opt_prop[i].long_name != NULL; ++i) {     // check the option if it takes arguments
                 
                 if(opt_prop[i].short_name == *option[0] ||
                    strcmp(opt_prop[i].long_name,*option) == 0) {
 
                    cofg->takes_args = opt_prop[i].takes_args; 
+                    printf("\t\tDEBUG: takes_args[%d]\n",cofg->takes_args);
                 }
             }
         }
