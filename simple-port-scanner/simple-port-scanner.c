@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
-#define TOK_DELIM " ,"
+#define TOK_DELIM ","
 #define MAX_CAP 100
 #define MIN_PORT 1
 #define MAX_PORT 65535 
@@ -22,7 +22,8 @@
 
 
 /*
- * TODO: fix the port range function and the ip adress input stream and check portmax-min
+ * TODO: fix the port range function and the ip adress input stream(decide how the program should take the ip address) , fix -help ...
+ * TODO: add a structure or enum to track and state the program's state (error ...) 
  */
 
 
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
     char *option = 0;
 	char *input_addr;			/* to store the ip address from the user */
 	//int port_min = 1, port_max = 65535;	/* port interval */
-	int socket_fd;				/* socket file descriptor */
+	int    socket_fd;				/* socket file descriptor */
 	struct sockaddr_in addr;		/* ip address */
 	struct pollfd pfd;			/* for a non-blocking socket */
 	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
@@ -93,12 +94,13 @@ int main(int argc, char *argv[])
                 return 1;
             }
             /* if the option takes arguments pass the next CL argument */
-            printf("\t\tmain DEBUG: takes_arg[%d]\n", cofg.takes_args);
-            int ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
-            if(ret == 1) {
+            int func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
+            
+            // Deciding what the program should do
+            if(func_ret == 1) {
                 // the program needs to exit
                 return 1;
-            } else if(ret == -1) {
+            } else if(func_ret == -1) {
                 // error occurred the program must exit
                 return 1;
             }
@@ -110,20 +112,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 	
-	printf("%s is a valid IPv4 address\n",input_addr);
-    /*do{		// Getting port range
-		printf("\nUsage : <int>-<int> (example : 20-80)\n");
-		printf("Please Enter the range of ports: ");
-		
-        if( scanf(" %d-%d", &port_min, &port_max) != 2){
-			printf("scanf: FAILED\n");
-			port_min = -1;
-			port_max = 65536;
-		}
+	printf("%s is a valid IPv4 address.\n",input_addr);
 
-	}while(port_min < 0 || port_max > 65535  || port_min > port_max);*/
-	
-	for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
+
+    for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
 		if(socket_fd == -1){
@@ -213,8 +205,7 @@ int exec_opt(char *option, char *arg, struct config *cofg)
            if(strcmp(option,opt_prop[i].long_name) == 0) 
            {
                free(option);
-               printf("\t\texec DEBUG: takes_arg[%d]\n", opt_prop[i].takes_args);
-               //return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
+               return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
                                                  opt_prop[i].handler("do not need args", cofg);
            }
        }
@@ -224,8 +215,8 @@ int exec_opt(char *option, char *arg, struct config *cofg)
            if(option[0] == opt_prop[i].short_name) 
            {
                free(option);
-               return (opt_prop[i].takes_args) ? opt_prop[i].handler("do not need args", cofg) : 
-                                                 opt_prop[i].handler(arg, cofg);
+               return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
+                                                 opt_prop[i].handler("do not need args", cofg);
            }
        }
     }
@@ -265,31 +256,35 @@ int help_opt(const char *arg, struct config *cfg)
 
 int  port_ran(const char *arg, struct config *cfg)
 {
-    /* may be use strtok() to tokenize numbers that are in the argument then passe them to strtol() */        
     if(arg == NULL) {
-        fprintf(stderr, "port_ran: passed an empty arg.\n");
-        return -1;
+        // default port range if nothing -p or --port has 0 arguments passed
+        cfg->port_min = 20;
+        cfg->port_max = 80;
+        return 0;
     }
    
-    printf("\t\tDEBUG: arg[%s]\n", arg);
     
     long p_max,p_min;
     char *str = strdup(arg);
     char *tokens[2];
+    char *token;
     char **endptr = 0;
     int  i;
 
     i = 0;
-    strtok(str, TOK_DELIM);
-    while(str != NULL && i < 2) {
-        tokens[i++] = str;    
-        strtok(NULL, TOK_DELIM);
+    token = strtok(str, TOK_DELIM);
+    while(token != NULL && i < 2) {
+        tokens[i++] = token;    
+        token = strtok(NULL, TOK_DELIM);
+    }
+    tokens[i] = NULL;
+    for(int j = 0;tokens[j] != NULL; ++j) {
     }
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
         return -1;
-    } else if(i == 1){
+    } else if(i == 2){
         p_min = strtol(tokens[1], endptr, 10);
         p_max = strtol(tokens[0], endptr, 10);
         
@@ -298,8 +293,13 @@ int  port_ran(const char *arg, struct config *cfg)
         } else if(p_max > MAX_PORT){
             p_max = MAX_PORT;
         }
-    } else{
-        p_min = p_max = strtol(tokens[0], endptr, 10);
+    } else if(i == 1){
+        if((p_min = p_max = strtol(tokens[0], endptr, 10)) == 0) {
+            fprintf(stderr, "port_ran: passed an invalid port range.\n");
+            fprintf(stderr, "Usage: --help or -h for Usage.\n");
+            return -1;
+        }
+        
         if(p_min < MIN_PORT) {
             p_min = p_max = MIN_PORT;
         } else if(p_max > MAX_PORT){
@@ -337,7 +337,6 @@ int parsing_func(char *argv, struct config *cofg, char **option)
                    strcmp(opt_prop[i].long_name,*option) == 0) {
 
                    cofg->takes_args = opt_prop[i].takes_args; 
-                    printf("\t\tDEBUG: takes_args[%d]\n",cofg->takes_args);
                 }
             }
         }
