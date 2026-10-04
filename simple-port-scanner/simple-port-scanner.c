@@ -11,9 +11,9 @@
 #include <sys/poll.h>
 
 #define TOK_DELIM ","
-#define MAX_CAP 100
-#define MIN_PORT 1
-#define MAX_PORT 65535 
+#define MAX_CAP   100
+#define MIN_PORT  1
+#define MAX_PORT  65535 
 
 /*
  * TODO: i think i should separate some concepts and functionalities in here into a header for
@@ -22,7 +22,7 @@
 
 
 /*
- * TODO: fix the port range function and the ip adress input stream(decide how the program should take the ip address) , fix -help ...
+ * TODO: fix the port range function and the ip adress input stream(decide how the program should take the ip address)...
  * TODO: add a structure or enum to track and state the program's state (error ...) 
  */
 
@@ -37,21 +37,21 @@ struct config {
 typedef int (*opthandler)(const char *arg, struct config *cfg);
 
 typedef struct {
-    char *long_name;     // "help", "ports"
-    char short_name;     // 'h', 'p'
-    int  takes_args;     // 0, 1
-    opthandler handler;  // option function
-    const char *description; // used to generate the help text
+    char        *long_name;     // "help", "ports"
+    char        short_name;     // 'h', 'p'
+    int         takes_args;     // 0, 1
+    opthandler  handler;        // option function
+    const char *description;    // used to generate the help text
 } option_entry;
 
 
 /****** UTILS FUNCTIONS *****/
-static int is_valid_ipv4(const char*);
-static char *check_opt(char *);         // RETURN THE OPTION CHARACTER
-int  help_opt(const char *arg, struct config *cfg); // DISPLAYING OPTIONS
-int  port_ran(const char *arg, struct config *cfg); // SETTING PORT RANGE    
-int  parsing_func(char *,struct config *, char **); // PARSING THE CL ARGS
-int  exec_opt(char*, char*,struct config *);
+static int  is_valid_ipv4(const char*);                    // CHECK FOR A VALID IPv4 ADDRESS
+static char *check_opt(char *);                            // RETURN THE OPTION CHARACTER
+int         help_opt(const char *arg, struct config *cfg); // DISPLAYING OPTIONS
+int         port_ran(const char *arg, struct config *cfg); // SETTING PORT RANGE    
+int         parsing_func(char *,struct config *, char **); // PARSING THE CL ARGS
+int         exec_opt(char*, char*,struct config *);
 
 // defining options and their properties
 option_entry opt_prop[3] = {
@@ -66,17 +66,23 @@ option_entry opt_prop[3] = {
 int main(int argc, char *argv[])
 {
     struct config cofg = { 0, 0L, 0L};
-    char *option = 0;
-	char *input_addr;			/* to store the ip address from the user */
-	//int port_min = 1, port_max = 65535;	/* port interval */
-	int    socket_fd;				/* socket file descriptor */
-	struct sockaddr_in addr;		/* ip address */
-	struct pollfd pfd;			/* for a non-blocking socket */
+    char   *option = 0;
+	char   *input_addr = NULL;			    /* to store the ip address from the user */
+	int    socket_fd;				        /* socket file descriptor */
+	struct sockaddr_in addr;		        /* ip address */
+	struct pollfd pfd;			            /* for a non-blocking socket */
 	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
 	int    err;
 	socklen_t len = sizeof(err);
 	
     if (argc >= 2) {
+        /*for(int j = 0;j < argc; ++j) {
+            ;    
+        }
+        if(input_addr == NULL) {
+            fprintf(stderr, "No address has passed\n.");
+            return 1;
+        }*/
         for(int i = 1;i < argc; ++i) {
             if (is_valid_ipv4(argv[i]) != 1) {
                 printf("IP address passed is invalid.\n");
@@ -87,7 +93,7 @@ int main(int argc, char *argv[])
                 // VALID ip address
                 input_addr = argv[i];
                 i++;
-            }  
+            } 
 
             if(parsing_func(argv[i], &cofg, &option) == 1){
                 // parsing failed
@@ -165,7 +171,7 @@ int main(int argc, char *argv[])
 							printf("connection timed out on port %ld .\n", port);
 						} else if(err == ENETUNREACH){  // network unreachable
 							
-							printf("network is unreachable.\n");
+							printf("network is unreachable on port: %ld.\n", port);
 						} else{
 							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
 						}
@@ -223,6 +229,7 @@ int exec_opt(char *option, char *arg, struct config *cofg)
        // if there isn't a match free the option
        free(option);
        fprintf(stderr, "Invalid option entered\n");
+       fprintf(stderr,"for help: --help or -h.\n");
        return -1;
 }
 
@@ -231,14 +238,20 @@ static char  *check_opt(char *arg)
     char option[MAX_CAP];
     int j = 0;
     if(arg[1] == '-') {
+        
         option[j++] = '-';
         for(int i = 2; isalpha(arg[i]) && j < MAX_CAP; ++i) {
             option[j++] = arg[i];
         }
         option[j] = '\0';
+    
     } else if(isalpha(arg[1])) {
-        option[0] = arg[1];
-        option[1] = '\0';
+    
+        for(int i = 1; isalpha(arg[i]) && j < MAX_CAP; ++i) {
+            option[j++] = arg[i];
+        }
+        option[j] = '\0';
+    
     } else {
         return NULL;
     }
@@ -278,8 +291,6 @@ int  port_ran(const char *arg, struct config *cfg)
         token = strtok(NULL, TOK_DELIM);
     }
     tokens[i] = NULL;
-    for(int j = 0;tokens[j] != NULL; ++j) {
-    }
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
@@ -325,7 +336,11 @@ int is_valid_ipv4(const char *src)
 }
 int parsing_func(char *argv, struct config *cofg, char **option)
 {
-        if(argv[0] == '-') {
+    if(argv == NULL) {
+        fprintf(stderr, "parsing_func: argv passed as NULL.\n");
+        return -1;
+    }
+    if(argv[0] == '-') {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
                 free(option);
@@ -339,7 +354,9 @@ int parsing_func(char *argv, struct config *cofg, char **option)
                    cofg->takes_args = opt_prop[i].takes_args; 
                 }
             }
-        }
+    } else{
+        return -1;
+    }
     
     return 0;
 }
