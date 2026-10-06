@@ -26,6 +26,11 @@
  * TODO: add a structure or enum to track and state the program's state (error ...) 
  */
 
+enum prog_state{
+    _ERR    = 01,               // error occured must terminate the program
+    _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
+    _RESUME = 04                // program should continue executing 
+};
 
 struct config {
     int takes_args;
@@ -65,6 +70,7 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
+    enum   prog_state state = _RESUME;
     struct config cofg = { 0, 0L, 0L};
     char   *option = 0;
 	char   *input_addr = NULL;			    /* to store the ip address from the user */
@@ -76,39 +82,56 @@ int main(int argc, char *argv[])
 	socklen_t len = sizeof(err);
 	
     if (argc >= 2) {
-        /*for(int j = 0;j < argc; ++j) {
-            ;    
+        for(int j = 0;j < argc; ++j) {
+            if(is_valid_ipv4(argv[j]) != 1) {
+                    state &= 0;
+                    state |= _ERR;
+            }
         }
         if(input_addr == NULL) {
-            fprintf(stderr, "No address has passed\n.");
-            return 1;
-        }*/
+            fprintf(stderr, "No address has passed.\n");
+            state &= 0;
+            state |= _EXIT;
+        }
         for(int i = 1;i < argc; ++i) {
-            if (is_valid_ipv4(argv[i]) != 1) {
+            /*if (is_valid_ipv4(argv[i]) != 1) {
                 printf("IP address passed is invalid.\n");
                 printf("Usage: %s <ipaddr> ...\n", argv[0]);
                 printf("For options: %s --help\n", argv[0]);
-                return 1;
+                    state &= 0;     // reset the state to 0
+                    state |= _ERR;
             } else{
                 // VALID ip address
+                
                 input_addr = argv[i];
                 i++;
-            } 
+            }*/ 
 
-            if(parsing_func(argv[i], &cofg, &option) == 1){
+            if(parsing_func(argv[i], &cofg, &option) == -1){
                 // parsing failed
-                return 1;
+                state &= 0;
+                state |= _ERR;
             }
-            /* if the option takes arguments pass the next CL argument */
-            int func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
+
+            if((state & _ERR) == _ERR) {
+                // error has occurred the program must exit
+                return -1;
+            } else if((state & _EXIT) == _EXIT) {
+                // program should exit
+                
             
-            // Deciding what the program should do
-            if(func_ret == 1) {
-                // the program needs to exit
-                return 1;
-            } else if(func_ret == -1) {
-                // error occurred the program must exit
-                return 1;
+
+                /* if the option takes arguments pass the next CL argument */
+                int func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
+            
+                // Deciding what the program should do
+                if(func_ret == 1) {
+                    // the program needs to exit
+                    return 1;
+                } else if(func_ret == -1) {
+                     // error occurred the program must exit
+                    return 1;
+                }
             }
         }
     } else{
@@ -291,7 +314,6 @@ int  port_ran(const char *arg, struct config *cfg)
         token = strtok(NULL, TOK_DELIM);
     }
     tokens[i] = NULL;
-    printf("\t\tDEBUG: token[%s]\n",tokens[0]);
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
@@ -325,7 +347,6 @@ int  port_ran(const char *arg, struct config *cfg)
     }
     cfg->port_min = p_min;
     cfg->port_max = p_max;
-    printf("\t\tDEBUG: port_min[%ld], port_max[%ld]\n", p_min, p_max);
     free(str);
     return 0;
 }
@@ -346,7 +367,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
                 free(option);
-                return 1;
+                return -1;
             }
             for(int i = 0;opt_prop[i].long_name != NULL; ++i) {     // check the option if it takes arguments
                 
