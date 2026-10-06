@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
-#define TOK_DELIM ","
+#define TOK_DELIM " ,-"
 #define MAX_CAP   100
 #define MIN_PORT  1
 #define MAX_PORT  65535 
@@ -291,6 +291,7 @@ int  port_ran(const char *arg, struct config *cfg)
         token = strtok(NULL, TOK_DELIM);
     }
     tokens[i] = NULL;
+    printf("\t\tDEBUG: token[%s]\n",tokens[0]);
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
@@ -324,6 +325,7 @@ int  port_ran(const char *arg, struct config *cfg)
     }
     cfg->port_min = p_min;
     cfg->port_max = p_max;
+    printf("\t\tDEBUG: port_min[%ld], port_max[%ld]\n", p_min, p_max);
     free(str);
     return 0;
 }
