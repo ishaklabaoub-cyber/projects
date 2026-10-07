@@ -372,7 +372,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
         fprintf(stderr, "parsing_func: argv passed as NULL.\n");
         return -1;
     }
-    if(argv[0] == '-') {
+    if(argv[0] == '-' && isalpha(argv[1])) {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
                 free(option);
@@ -387,6 +387,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
                 }
             }
     } else{
+        fprintf(stderr, "parsing_func: unvalid option entered.\n");
         return -1;
     }
     
