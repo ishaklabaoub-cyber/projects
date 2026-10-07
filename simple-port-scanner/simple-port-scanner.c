@@ -29,7 +29,8 @@
 enum prog_state{
     _ERR    = 01,               // error occured must terminate the program
     _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
-    _RESUME = 04                // program should continue executing 
+    _WAIT   = 04,               // program should wait
+    _RESUME = 16                // program should continue executing 
 };
 
 struct config {
@@ -70,6 +71,7 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
+    int    func_ret,index;
     enum   prog_state state = _RESUME;
     struct config cofg = { 0, 0L, 0L};
     char   *option = 0;
@@ -83,30 +85,18 @@ int main(int argc, char *argv[])
 	
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
-            if(is_valid_ipv4(argv[j]) != 1) {
-                    state &= 0;
-                    state |= _ERR;
+            if((func_ret = is_valid_ipv4(argv[j])) != 1) {
+                state |= _WAIT;
+            } else if(func_ret == 1){
+                input_addr = argv[j];
+                state |= _RESUME;
+                index = j;
+                break;
             }
         }
-        if(input_addr == NULL) {
-            fprintf(stderr, "No address has passed.\n");
-            state &= 0;
-            state |= _EXIT;
-        }
-        for(int i = 1;i < argc; ++i) {
-            /*if (is_valid_ipv4(argv[i]) != 1) {
-                printf("IP address passed is invalid.\n");
-                printf("Usage: %s <ipaddr> ...\n", argv[0]);
-                printf("For options: %s --help\n", argv[0]);
-                    state &= 0;     // reset the state to 0
-                    state |= _ERR;
-            } else{
-                // VALID ip address
-                
-                input_addr = argv[i];
-                i++;
-            }*/ 
 
+        for(int i = 1;i < argc; ++i) {
+            if(i == index)i++;
             if(parsing_func(argv[i], &cofg, &option) == -1){
                 // parsing failed
                 state &= 0;
@@ -116,23 +106,42 @@ int main(int argc, char *argv[])
             if((state & _ERR) == _ERR) {
                 // error has occurred the program must exit
                 return -1;
-            } else if((state & _EXIT) == _EXIT) {
-                // program should exit
-                
-            
+            } else if((state & _WAIT) == _WAIT) {
+                /* program should wait for options:
+                 * - State's of the program must be checked for error (_ERR) for options that needs to resume the connection or 
+                 *   other functionalities.
+                 * - For options that needs to exit the program like (--help or -h)
+                 */
 
                 /* if the option takes arguments pass the next CL argument */
-                int func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
+                func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
             
-                // Deciding what the program should do
                 if(func_ret == 1) {
                     // the program needs to exit
-                    return 1;
+                    state |= _EXIT;
                 } else if(func_ret == -1) {
                      // error occurred the program must exit
-                    return 1;
+                    state &=  0;
+                    state |= _ERR;
+                } else {
+                    state |= _RESUME;
                 }
             }
+                
+            // Deciding what the program should do
+            if((state & _ERR) == _ERR) {
+                return -1;
+            } else if ((state & _EXIT) == _EXIT) {
+                return 1;
+            } else {
+                if (input_addr == NULL) {
+                    return 1;
+                } else {
+                    state &= 0;
+                    state |= _RESUME;
+                }
+            }
+        
         }
     } else{
         fprintf(stderr, "too few arguments.");
