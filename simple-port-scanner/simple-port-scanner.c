@@ -272,7 +272,7 @@ static char  *check_opt(char *arg)
     if(arg[1] == '-') {
         
         option[j++] = '-';
-        for(int i = 2; isalpha(arg[i]) && j < MAX_CAP; ++i) {
+        for(int i = 2; isalpha(arg[i]) && j < MAX_CAP-1; ++i) {
             option[j++] = arg[i];
         }
         option[j] = '\0';
