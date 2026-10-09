@@ -24,7 +24,6 @@
 
 /*
  * TODO: fix the port range function and the ip adress input stream(decide how the program should take the ip address)...
- * TODO: add a structure or enum to track and state the program's state (error ...) 
  */
 
 enum prog_state{
@@ -54,6 +53,7 @@ typedef struct {
 
 /****** UTILS FUNCTIONS *****/
 static int  is_valid_ipv4(const char*);                    // CHECK FOR A VALID IPv4 ADDRESS
+static int  isthere_digits(const char*);                   // CHECK IF THERE IS DIGITS IN A STRING
 static char *check_opt(char *);                            // RETURN THE OPTION CHARACTER
 int         help_opt(const char *arg, struct config *cfg); // DISPLAYING OPTIONS
 int         port_ran(const char *arg, struct config *cfg); // SETTING PORT RANGE    
@@ -97,7 +97,8 @@ int main(int argc, char *argv[])
         }
 
         for(int i = 1;i < argc; ++i) {
-            if(i == index)i++;
+            if(i == index)continue;
+        
             if(parsing_func(argv[i], &cofg, &option) == -1){
                 // parsing failed
                 state &= 0;
@@ -106,6 +107,8 @@ int main(int argc, char *argv[])
 
             if((state & _ERR) == _ERR) {
                 // error has occurred the program must exit
+                free(option);
+                option = NULL;
                 return -1;
             } else if((state & _WAIT) == _WAIT) {
                 /* program should wait for options:
@@ -116,7 +119,7 @@ int main(int argc, char *argv[])
 
                 /* if the option takes arguments pass the next CL argument */
                 func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
-            
+                
                 if(func_ret == 1) {
                     // the program needs to exit
                     state |= _EXIT;
@@ -152,7 +155,6 @@ int main(int argc, char *argv[])
     }
 	
 	printf("%s is a valid IPv4 address.\n",input_addr);
-
 
     for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
 		
@@ -232,10 +234,22 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+static int  isthere_digits(const char *arg) 
+{
+    size_t len = strlen(arg);
+    for(int i = 0; i < len; ++i) {
+        if(isdigit(arg[i])) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int exec_opt(char *option, char *arg, struct config *cofg) 
 {
     if(option == NULL) {
         fprintf(stderr, "exec_opt: passed an empty string\n");
+        free(option);
         return -1;
     }
     if(strlen(option) > 1){
@@ -244,6 +258,7 @@ int exec_opt(char *option, char *arg, struct config *cofg)
            if(strcmp(option,opt_prop[i].long_name) == 0) 
            {
                free(option);
+               option = NULL;
                return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
                                                  opt_prop[i].handler("do not need args", cofg);
            }
@@ -254,6 +269,7 @@ int exec_opt(char *option, char *arg, struct config *cofg)
            if(option[0] == opt_prop[i].short_name) 
            {
                free(option);
+               option = NULL;
                return (opt_prop[i].takes_args) ? opt_prop[i].handler(arg, cofg) : 
                                                  opt_prop[i].handler("do not need args", cofg);
            }
@@ -261,6 +277,7 @@ int exec_opt(char *option, char *arg, struct config *cofg)
     }
        // if there isn't a match free the option
        free(option);
+       option = NULL;
        fprintf(stderr, "Invalid option entered\n");
        fprintf(stderr,"for help: --help or -h.\n");
        return -1;
@@ -308,6 +325,11 @@ int  port_ran(const char *arg, struct config *cfg)
         cfg->port_min = 20;
         cfg->port_max = 80;
         return 0;
+    } else {
+        if(isthere_digits(arg)) {
+            fprintf(stderr, "You did not pass a valid port numbers.\n");
+            return 1; 
+        }
     }
    
     
@@ -323,22 +345,23 @@ int  port_ran(const char *arg, struct config *cfg)
         tokens[i++] = token;    
         token = strtok(NULL, TOK_DELIM);
     }
-    /* checking if the tokens are valid to pass them to strtol() */
+    
+    /* checking bounds of tokens */
+    if(i > 2) {
+        fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
+        free(str);
+        return -1;
+    }
 
-    for(int j = 0;j <= i; ++j) {
+    /* checking if the tokens are valid to pass them to strtol() */
+    for(int j = 0;j < i; ++j) {
         if(strtol(tokens[j], endptr, 10) == LONG_MAX ||
            strtol(tokens[j], endptr, 10) == LONG_MIN ||   
            strtol(tokens[j], endptr, 10) == 0      ) {
                 return -1;
         }
     }
-
-
-    if(i > 2) {
-        fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
-        free(str);
-        return -1;
-    }else if(i == 2){
+    if(i == 2){
         p_min = strtol(tokens[1], endptr, 10);
         p_max = strtol(tokens[0], endptr, 10);
         
@@ -368,21 +391,16 @@ int  port_ran(const char *arg, struct config *cfg)
     }
     cfg->port_min = p_min;
     cfg->port_max = p_max;
-    printf("\t\tDEBUG: p_min[%ld], p_max[%ld]\n", p_min, p_max);
     free(str);
     return 0;
 }
 
-int is_valid_ipv4(const char *src)
-{
-	struct sockaddr_in dst;
 
-	return inet_pton(AF_INET, src, &dst);
-}
 int parsing_func(char *argv, struct config *cofg, char **option)
 {
     if(argv == NULL) {
         fprintf(stderr, "parsing_func: argv passed as NULL.\n");
+        fprintf(stderr, "for help: --help or -h\n");
         return -1;
     }
     if(argv[0] == '-' && (isalpha(argv[1]) || argv[1] == '-')) {
@@ -400,9 +418,15 @@ int parsing_func(char *argv, struct config *cofg, char **option)
                 }
             }
     } else{
-        fprintf(stderr, "parsing_func: unvalid option entered.\n");
+        fprintf(stderr, "parsing_func: Invalid option entered.\n");
         return -1;
     }
     
     return 0;
+}
+int is_valid_ipv4(const char *src)
+{
+	struct sockaddr_in dst;
+
+	return inet_pton(AF_INET, src, &dst);
 }
