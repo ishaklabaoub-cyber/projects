@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -279,7 +280,7 @@ static char  *check_opt(char *arg)
     
     } else if(isalpha(arg[1])) {
     
-        for(int i = 1; isalpha(arg[i]) && j < MAX_CAP; ++i) {
+        for(int i = 1; isalpha(arg[i]) && j < MAX_CAP-1; ++i) {
             option[j++] = arg[i];
         }
         option[j] = '\0';
@@ -303,6 +304,7 @@ int  port_ran(const char *arg, struct config *cfg)
 {
     if(arg == NULL) {
         // default port range if nothing -p or --port has 0 arguments passed
+        fprintf(stderr, "port_ran: arg passed empty.\nSetting port range to [20,80].\n");
         cfg->port_min = 20;
         cfg->port_max = 80;
         return 0;
@@ -314,20 +316,29 @@ int  port_ran(const char *arg, struct config *cfg)
     char *tokens[2];
     char *token;
     char **endptr = 0;
-    int  i;
+    int  i = 0;
 
-    i = 0;
     token = strtok(str, TOK_DELIM);
     while(token != NULL && i < 2) {
         tokens[i++] = token;    
         token = strtok(NULL, TOK_DELIM);
     }
-    tokens[i] = NULL;
+    /* checking if the tokens are valid to pass them to strtol() */
+
+    for(int j = 0;j <= i; ++j) {
+        if(strtol(tokens[j], endptr, 10) == LONG_MAX ||
+           strtol(tokens[j], endptr, 10) == LONG_MIN ||   
+           strtol(tokens[j], endptr, 10) == 0      ) {
+                return -1;
+        }
+    }
+
+
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
         return -1;
-    } else if(i == 2){
+    }else if(i == 2){
         p_min = strtol(tokens[1], endptr, 10);
         p_max = strtol(tokens[0], endptr, 10);
         
@@ -340,6 +351,7 @@ int  port_ran(const char *arg, struct config *cfg)
         if((p_min = p_max = strtol(tokens[0], endptr, 10)) == 0) {
             fprintf(stderr, "port_ran: passed an invalid port range.\n");
             fprintf(stderr, "Usage: --help or -h for Usage.\n");
+            free(str);
             return -1;
         }
         
@@ -356,6 +368,7 @@ int  port_ran(const char *arg, struct config *cfg)
     }
     cfg->port_min = p_min;
     cfg->port_max = p_max;
+    printf("\t\tDEBUG: p_min[%ld], p_max[%ld]\n", p_min, p_max);
     free(str);
     return 0;
 }
@@ -372,7 +385,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
         fprintf(stderr, "parsing_func: argv passed as NULL.\n");
         return -1;
     }
-    if(argv[0] == '-' && isalpha(argv[1])) {
+    if(argv[0] == '-' && (isalpha(argv[1]) || argv[1] == '-')) {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
                 free(option);
