@@ -21,11 +21,6 @@
  * more organization.
  */
 
-
-/*
- * TODO: fix the port range function and the ip adress input stream(decide how the program should take the ip address)...
- */
-
 enum prog_state{
     _ERR    = 01,               // error occured must terminate the program
     _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
@@ -72,6 +67,7 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
+    int    open_count, closed_count;/* counters for how many ports are open or closed */    
     int    func_ret,index;
     enum   prog_state state = _RESUME;
     struct config cofg = { 0, 0L, 0L};
@@ -156,6 +152,8 @@ int main(int argc, char *argv[])
 	
 	printf("%s is a valid IPv4 address.\n",input_addr);
 
+    open_count   = 0;
+    closed_count = 0;
     for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -196,11 +194,11 @@ int main(int argc, char *argv[])
 					} else{
 						if(err == 0){	// connection succeeded
 							printf("port %ld is open on %s\n", port, input_addr);
+                            open_count++;
 
 						} else if(err == ECONNREFUSED){ // connection refused
 							// closed port.
-							//printf("port %ld is closed on %s\n", port, input_addr);
-
+                            closed_count++;
 						} else if(err == ETIMEDOUT){	// connection timed out
 							
 							printf("connection timed out on port %ld .\n", port);
@@ -231,6 +229,8 @@ int main(int argc, char *argv[])
 			close(socket_fd);
 	}
 
+    // SUMMARY
+    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d]\n", cofg.port_max - cofg.port_min + 1, open_count, closed_count);
 	return 0;
 }
 
