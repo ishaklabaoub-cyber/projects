@@ -72,13 +72,6 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
-<<<<<<< HEAD
-	char input_addr[16];			/* to store the ip address from the user */
-	int port_min = 0, port_max = 65535;	/* port interval */
-	int socket_fd;				/* socket file descriptor */
-	struct sockaddr_in addr;		/* ip address */
-	struct pollfd pfd;			/* for a non-blocking socket */
-=======
     int    func_ret,index;
     enum   prog_state state = _RESUME;
     struct config cofg = { 0, 0L, 0L};
@@ -87,7 +80,6 @@ int main(int argc, char *argv[])
 	int    socket_fd;				        /* socket file descriptor */
 	struct sockaddr_in addr;		        /* ip address */
 	struct pollfd pfd;			            /* for a non-blocking socket */
->>>>>>> feature/cli-options
 	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
 	int    err;
 	socklen_t len = sizeof(err);
