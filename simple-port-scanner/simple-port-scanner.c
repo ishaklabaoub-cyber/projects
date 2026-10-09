@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 					printf("error occured.\n");
 				
 				} else if(return_val_poll == 0){	// the poll timeout ran out of time
-					printf("connection timeout on port %ld.\n", port);
+					printf("connection timeout on port %ld \n", port);
 				}
 			} else if(current_error == ECONNREFUSED){
 				printf("port %ld is closed on %s\n", port, input_addr);
