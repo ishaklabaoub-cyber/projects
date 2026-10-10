@@ -78,7 +78,7 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
-    int    open_count, closed_count, filtered_count;    
+    int    open_count, closed_count, filtered_count, unreachable_count;    
     enum   port_state p_state;
     struct config cofg = { 0, NULL, 0L, 0L};
 	int    socket_fd;				        /* socket file descriptor */
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     open_count   = 0;
     closed_count = 0;
     filtered_count = 0;
-    
+    unreachable_count = 0;
     for(long port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -109,6 +109,7 @@ int main(int argc, char *argv[])
         p_state = scan_port(socket_fd, cofg.input_addr, port);
         switch(p_state) {
             case _OPEN:
+                printf("port %ld is open on %s\n", port, cofg.input_addr);
                 open_count++;
                 break;
             case _CLOSED:
@@ -119,6 +120,7 @@ int main(int argc, char *argv[])
                 break;
             case _UNREACHABLE:
                 printf("Network is unreachable on port %ld\n", port);
+                unreachable_count++;
                 break;
             case _UNDEFINED:
 			    printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
@@ -138,8 +140,8 @@ int main(int argc, char *argv[])
     long ports_scanned = cofg.port_max - cofg.port_min +1;
 
     // SUMMARY
-    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d] | time taken: [%.2lf s]\n", 
-                       ports_scanned, open_count, closed_count, filtered_count, time_taken);
+    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d], unreachable ports[%d] | time taken: [%.2lf s]\n", 
+                       ports_scanned, open_count, closed_count, filtered_count, unreachable_count,time_taken);
 	return 0;
 }
 
@@ -262,7 +264,7 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 					} else{
                         close(socket_fd);
 						if(err == 0){	// connection succeeded
-                            printf("port %ld is open on %s\n", port, input_addr);
+                            //printf("port %ld is open on %s\n", port, input_addr);
 							return _OPEN;
                             
 						} else if(err == ECONNREFUSED){ // connection refused
@@ -273,7 +275,6 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 						} else if(err == ENETUNREACH){  // network unreachable
 						    return _UNREACHABLE;	
 						} else{
-							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
 						    return _UNDEFINED;
                         }
 					}
