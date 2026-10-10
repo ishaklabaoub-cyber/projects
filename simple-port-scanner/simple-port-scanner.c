@@ -1,3 +1,4 @@
+#include <asm-generic/errno.h>
 #include <time.h>
 #include <limits.h>
 #include <netinet/in.h>
@@ -51,7 +52,7 @@ typedef struct {
     char        short_name;     // 'h', 'p'
     int         takes_args;     // 0, 1
     opthandler  handler;        // option function
-    const char *description;    // used to generate the help text
+    const char  *description;   // used to generate the help text
 } option_entry;
 
 
@@ -63,8 +64,8 @@ static char *check_opt(char *);                            // RETURN THE OPTION 
 int         help_opt(const char *arg, struct config *cfg); // DISPLAYING OPTIONS
 int         port_ran(const char *arg, struct config *cfg); // SETTING PORT RANGE    
 int         parsing_func(char *,struct config *, char **); // PARSING THE CL ARGS
-int         exec_opt(char*, char*,struct config *);
-int         parse_args(int , char* [], struct config *);
+int         exec_opt(char*, char*,struct config *);        // EXECUTING OPTIONS
+int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMENTS
 
 // defining options and their properties
 option_entry opt_prop[3] = {
@@ -251,7 +252,7 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 		
     if(ret == -1){
         int current_error = errno;
-		if(expected_error == current_error){	// connection in progress
+		if(current_error == expected_error){	// connection in progress
 
 				int return_val_poll = poll(&pfd, 1, 300);
 				if(pfd.revents & POLLOUT){	// the socket is writable and O_NONBLOCK must be set
@@ -264,9 +265,8 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 					} else{
                         close(socket_fd);
 						if(err == 0){	// connection succeeded
-                            //printf("port %ld is open on %s\n", port, input_addr);
 							return _OPEN;
-                            
+
 						} else if(err == ECONNREFUSED){ // connection refused
 							// closed port.
                             return _CLOSED;
@@ -295,12 +295,13 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
                 // closed port
                 close(socket_fd);
                 return _CLOSED;
-            } else{
-				perror("connect");
+            } else if(current_error == ENETUNREACH){
+                // network unreachable
                 close(socket_fd);
-			    return _ERROR;
-            }		
+			    return _UNREACHABLE;
+            }	
 		} 
+
 		// connection succeed
 		printf("port %ld is open on %s\n", port, input_addr);
         close(socket_fd);
@@ -384,6 +385,8 @@ static char  *check_opt(char *arg)
 
 int help_opt(const char *arg, struct config *cfg) 
 {
+    (void)arg;
+    (void)cfg;
     printf("\n\t\t***HELP is COMING***\nIshak's port scanner options:\n");
     for(int i = 0;opt_prop[i].description != NULL; ++i) {
         printf("%s", opt_prop[i].description);
