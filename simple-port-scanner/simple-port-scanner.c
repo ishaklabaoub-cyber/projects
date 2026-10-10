@@ -1,4 +1,3 @@
-#include <asm-generic/errno.h>
 #include <time.h>
 #include <limits.h>
 #include <netinet/in.h>
@@ -68,7 +67,7 @@ int         exec_opt(char*, char*,struct config *);        // EXECUTING OPTIONS
 int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMENTS
 
 // defining options and their properties
-option_entry opt_prop[3] = {
+option_entry opt_prop[3] = {                    /* returns values meanings: 1 -> program should exit , -1 -> error detected program must exit, 0 -> success */
 
     {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: --help or -h\n"},
     {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: --port -p <int> <int>\n"},
@@ -151,6 +150,8 @@ int parse_args(int argc, char *argv[], struct config *cofg)
     int    func_ret,index;
     enum   prog_state state = _RESUME;
     char   *option = 0;
+    
+    index = -1;
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
             if((func_ret = is_valid_ipv4(argv[j])) != 1) {
@@ -203,11 +204,11 @@ int parse_args(int argc, char *argv[], struct config *cofg)
             if((state & _ERR) == _ERR) {
                 return -1;
             } else if ((state & _EXIT) == _EXIT) {
-                return 1;
+                return 0;
             } else {
                 if (cofg->input_addr == NULL) {
                     fprintf(stderr, "no IP address is given.\n");
-                    return 1;
+                    return -1;
                 } else {
                     state &= 0;
                     state |= _RESUME;
@@ -219,7 +220,7 @@ int parse_args(int argc, char *argv[], struct config *cofg)
         fprintf(stderr, "too few arguments.");
         printf("Usage: %s <ipaddr> ...\n", argv[0]);
         printf("For options: %s --help\n", argv[0]);
-        return 1;
+        return -1;
     }
 	
 	printf("%s is a valid IPv4 address.\n", cofg->input_addr);
