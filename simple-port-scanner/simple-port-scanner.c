@@ -286,6 +286,10 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 				} else if(return_val_poll == 0){	// the poll timeout ran out of time
 				    close(socket_fd);
                     return _FILTERED;
+                } else if(return_val_poll == -1){
+                    perror("poll");
+                    close(socket_fd);
+                    return _ERROR;
                 }
 			} else if(current_error == ECONNREFUSED){
                 // closed port
