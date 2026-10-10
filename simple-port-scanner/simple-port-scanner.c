@@ -1,3 +1,4 @@
+#include <time.h>
 #include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -83,7 +84,10 @@ int main(int argc, char *argv[])
     struct config cofg = { 0, NULL, 0L, 0L};
     char   *option = 0;
 	int    socket_fd;				        /* socket file descriptor */
-	
+    struct timespec start_time,end_time;
+
+    timespec_get(&start_time, TIME_UTC);
+
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
             if((func_ret = is_valid_ipv4(argv[j])) != 1) {
@@ -197,8 +201,15 @@ int main(int argc, char *argv[])
         }
 	}
 
+
+    timespec_get(&end_time, TIME_UTC);
+    double time_taken = (end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
+    
+    long ports_scanned = cofg.port_max - cofg.port_min +1;
+
     // SUMMARY
-    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d]\n", cofg.port_max - cofg.port_min + 1, open_count, closed_count, filtered_count);
+    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d] | time taken: [%lf]\n", 
+                       ports_scanned, open_count, closed_count, filtered_count, time_taken);
 	return 0;
 }
 
