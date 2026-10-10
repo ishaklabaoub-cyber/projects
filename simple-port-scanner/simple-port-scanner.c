@@ -37,6 +37,7 @@ enum prog_state {
 };
 struct config {
     int takes_args;
+    char *input_addr;
     long port_max;
     long port_min;
 };
@@ -79,9 +80,8 @@ int main(int argc, char *argv[])
     int    func_ret,index;
     enum   port_state p_state;
     enum   prog_state state = _RESUME;
-    struct config cofg = { 0, 0L, 0L};
+    struct config cofg = { 0, NULL, 0L, 0L};
     char   *option = 0;
-	char   *input_addr = NULL;			    /* to store the ip address from the user */
 	int    socket_fd;				        /* socket file descriptor */
 	
     if (argc >= 2) {
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
             if((func_ret = is_valid_ipv4(argv[j])) != 1) {
                 state |= _WAIT;
             } else if(func_ret == 1){
-                input_addr = argv[j];
+                cofg.input_addr = argv[j];
                 state |= _RESUME;
                 index = j;
                 break;
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
             } else if ((state & _EXIT) == _EXIT) {
                 return 1;
             } else {
-                if (input_addr == NULL) {
+                if (cofg.input_addr == NULL) {
                     fprintf(stderr, "no IP address is given.\n");
                     return 1;
                 } else {
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 	
-	printf("%s is a valid IPv4 address.\n", input_addr);
+	printf("%s is a valid IPv4 address.\n", cofg.input_addr);
 
     // initializing counters
     open_count   = 0;
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-        p_state = scan_port(socket_fd, input_addr, port);
+        p_state = scan_port(socket_fd, cofg.input_addr, port);
         switch(p_state) {
             case _OPEN:
                 open_count++;
