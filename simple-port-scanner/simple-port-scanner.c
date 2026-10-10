@@ -21,13 +21,20 @@
  * more organization.
  */
 
-enum prog_state{
+enum port_state {
+    _OPEN      = 01,
+    _CLOSED    = 02,
+    _FILTERED  = 04,
+    _UNREACHABLE = 16,
+    _ERROR     = 32,
+    _UNDEFINED = 64
+};
+enum prog_state {
     _ERR    = 01,               // error occured must terminate the program
     _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
     _WAIT   = 04,               // program should wait
     _RESUME = 16                // program should continue executing 
 };
-
 struct config {
     int takes_args;
     long port_max;
@@ -47,6 +54,7 @@ typedef struct {
 
 
 /****** UTILS FUNCTIONS *****/
+enum port_state scan_port(int , const char *, long);       // USED  FOR SCANNING PORTS
 static int  is_valid_ipv4(const char*);                    // CHECK FOR A VALID IPv4 ADDRESS
 static int  isthere_digits(const char*);                   // CHECK IF THERE IS DIGITS IN A STRING
 static char *check_opt(char *);                            // RETURN THE OPTION CHARACTER
@@ -67,18 +75,19 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
-    int    open_count, closed_count;/* counters for how many ports are open or closed */    
+    int    open_count, closed_count, filtered_count;    
     int    func_ret,index;
+    enum   port_state p_state;
     enum   prog_state state = _RESUME;
     struct config cofg = { 0, 0L, 0L};
     char   *option = 0;
 	char   *input_addr = NULL;			    /* to store the ip address from the user */
 	int    socket_fd;				        /* socket file descriptor */
-	struct sockaddr_in addr;		        /* ip address */
-	struct pollfd pfd;			            /* for a non-blocking socket */
-	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
-	int    err;
-	socklen_t len = sizeof(err);
+	//struct sockaddr_in addr;		        /* ip address */
+	//struct pollfd pfd;			            /* for a non-blocking socket */
+	//int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
+	//int    err;
+	//socklen_t len = sizeof(err);
 	
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
@@ -135,6 +144,7 @@ int main(int argc, char *argv[])
                 return 1;
             } else {
                 if (input_addr == NULL) {
+                    fprintf(stderr, "no IP address is given.\n");
                     return 1;
                 } else {
                     state &= 0;
@@ -150,11 +160,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 	
-	printf("%s is a valid IPv4 address.\n",input_addr);
+	printf("%s is a valid IPv4 address.\n", input_addr);
 
     open_count   = 0;
     closed_count = 0;
-    for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
+    filtered_count = 0;
+    for(long port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
 		if(socket_fd == -1){
@@ -164,22 +175,45 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		addr.sin_family = AF_INET;
+        p_state = scan_port(socket_fd, input_addr, port);
+        switch(p_state) {
+            case _OPEN:
+                open_count++;
+                break;
+            case _CLOSED:
+                closed_count++;
+                break;
+            case _FILTERED:
+                filtered_count++;
+                break;
+            case _UNREACHABLE:
+                printf("Network is unreachable on port %ld\n", port);
+                break;
+            case _UNDEFINED:
+			    printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
+                break;
+            case _ERROR:
+                return 1;
+            default:
+                fprintf(stderr, "INVALID PORT STATE.\n");
+                break;
+        }
+		/*addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);	
 		if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
 			fprintf(stderr,"INVALID IP ADDRESS : %s\n",input_addr);
 			perror("inet_pton");
 			close(socket_fd);
-		}
+            continue;
+        }
 
-		/***************** must add the poll() function for non-blocking sockets*******************/ 
-		fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+	    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
 		pfd.fd = socket_fd;	
 		pfd.events = POLLOUT;
 		pfd.revents = 0;
 		
 		errno = 0;
-		int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		/* trying to connect */
+		int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		
 		
 		if(ret == -1){
 			int current_error = errno;
@@ -215,29 +249,110 @@ int main(int argc, char *argv[])
 					printf("error occured.\n");
 				
 				} else if(return_val_poll == 0){	// the poll timeout ran out of time
-					printf("connection timeout on port %ld \n", port);
+					printf("port %ld filtered(timout).\n", port);
 				}
 			} else if(current_error == ECONNREFUSED){
-				printf("port %ld is closed on %s\n", port, input_addr);
-			} else{
+                // closed port
+			    closed_count++;
+            } else{
 				perror("connect");
 			}		
 		} else{
 			// connection succeed
 			printf("port %ld is open on %s\n", port, input_addr);
 		}
-			close(socket_fd);
+			close(socket_fd);*/
 	}
 
     // SUMMARY
-    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d]\n", cofg.port_max - cofg.port_min + 1, open_count, closed_count);
+    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d]\n", cofg.port_max - cofg.port_min + 1, open_count, closed_count, filtered_count);
 	return 0;
+}
+
+enum port_state scan_port(int socket_fd,const char *input_addr,long port)
+{
+    struct sockaddr_in addr;		        /* ip address */
+	struct pollfd pfd;			            /* for a non-blocking socket */
+	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
+	int    err;   
+    socklen_t len = sizeof(err);
+    
+    addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);	
+	if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
+		fprintf(stderr,"INVALID IP ADDRESS : %s\n",input_addr);
+		perror("inet_pton");
+		close(socket_fd);
+    }
+    /***************** must add the poll() function for non-blocking sockets*******************/ 
+    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+    pfd.fd = socket_fd;	
+    pfd.events = POLLOUT;
+    pfd.revents = 0;
+		
+    errno = 0;
+    int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		/* trying to connect */
+		
+    if(ret == -1){
+        int current_error = errno;
+		if(expected_error == current_error){	// connection in progress
+
+				int return_val_poll = poll(&pfd, 1, 300);
+				if(pfd.revents & POLLOUT){	// the socket is writable and O_NONBLOCK must be set
+					
+					if(getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1){
+						// getsockopt() failed
+                        perror("getsockopt");
+						close(socket_fd);
+                        return _ERROR;
+					} else{
+                        close(socket_fd);
+						if(err == 0){	// connection succeeded
+                            printf("port %ld is open on %s\n", port, input_addr);
+							return _OPEN;
+                            
+						} else if(err == ECONNREFUSED){ // connection refused
+							// closed port.
+                            return _CLOSED;
+						} else if(err == ETIMEDOUT){	// connection timed out
+                            return _FILTERED;
+						} else if(err == ENETUNREACH){  // network unreachable
+						    return _UNREACHABLE;	
+						} else{
+							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
+						    return _UNDEFINED;
+                        }
+					}
+
+				} else if(pfd.revents & POLLERR){	//check if any errors occured in pfd.revents
+                    fprintf(stderr, "error occured.\n");
+					close(socket_fd);
+                    return _ERROR;
+				} else if(return_val_poll == 0){	// the poll timeout ran out of time
+				    close(socket_fd);
+                    return _FILTERED;
+                }
+			} else if(current_error == ECONNREFUSED){
+                // closed port
+                close(socket_fd);
+                return _CLOSED;
+            } else{
+				perror("connect");
+                close(socket_fd);
+			    return _ERROR;
+            }		
+		} 
+		// connection succeed
+		printf("port %ld is open on %s\n", port, input_addr);
+        close(socket_fd);
+        return _OPEN;
+    
 }
 
 static int  isthere_digits(const char *arg) 
 {
     size_t len = strlen(arg);
-    for(int i = 0; i < len; ++i) {
+    for(int i = 0; i < (int)len; ++i) {
         if(isdigit(arg[i])) {
             return 0;
         }
