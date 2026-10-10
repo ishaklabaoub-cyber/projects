@@ -83,11 +83,6 @@ int main(int argc, char *argv[])
     char   *option = 0;
 	char   *input_addr = NULL;			    /* to store the ip address from the user */
 	int    socket_fd;				        /* socket file descriptor */
-	//struct sockaddr_in addr;		        /* ip address */
-	//struct pollfd pfd;			            /* for a non-blocking socket */
-	//int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
-	//int    err;
-	//socklen_t len = sizeof(err);
 	
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
@@ -162,9 +157,11 @@ int main(int argc, char *argv[])
 	
 	printf("%s is a valid IPv4 address.\n", input_addr);
 
+    // initializing counters
     open_count   = 0;
     closed_count = 0;
     filtered_count = 0;
+    
     for(long port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -198,70 +195,6 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "INVALID PORT STATE.\n");
                 break;
         }
-		/*addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);	
-		if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
-			fprintf(stderr,"INVALID IP ADDRESS : %s\n",input_addr);
-			perror("inet_pton");
-			close(socket_fd);
-            continue;
-        }
-
-	    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
-		pfd.fd = socket_fd;	
-		pfd.events = POLLOUT;
-		pfd.revents = 0;
-		
-		errno = 0;
-		int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		
-		
-		if(ret == -1){
-			int current_error = errno;
-			if(expected_error == current_error){	// connection in progress
-
-				int return_val_poll = poll(&pfd, 1, 300);
-				if(pfd.revents & POLLOUT){	// the socket is writable and O_NONBLOCK must be set
-					
-					if(getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1){
-						// getsockopt() failed
-						perror("getsockopt");
-					} else{
-						if(err == 0){	// connection succeeded
-							printf("port %ld is open on %s\n", port, input_addr);
-                            open_count++;
-
-						} else if(err == ECONNREFUSED){ // connection refused
-							// closed port.
-                            closed_count++;
-						} else if(err == ETIMEDOUT){	// connection timed out
-							
-							printf("connection timed out on port %ld .\n", port);
-						} else if(err == ENETUNREACH){  // network unreachable
-							
-							printf("network is unreachable on port: %ld.\n", port);
-						} else{
-							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
-						}
-					}
-
-				} else if(pfd.revents & POLLERR){	//check if any errors occured in pfd.revents
-					
-					printf("error occured.\n");
-				
-				} else if(return_val_poll == 0){	// the poll timeout ran out of time
-					printf("port %ld filtered(timout).\n", port);
-				}
-			} else if(current_error == ECONNREFUSED){
-                // closed port
-			    closed_count++;
-            } else{
-				perror("connect");
-			}		
-		} else{
-			// connection succeed
-			printf("port %ld is open on %s\n", port, input_addr);
-		}
-			close(socket_fd);*/
 	}
 
     // SUMMARY
