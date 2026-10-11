@@ -165,6 +165,8 @@ grep -q "port $PORT_A is open" <<<"$OUT" \
 
 run_scan "$HOST" -p "$PORT_B"
 expect_reject "junk argument after a valid option" "$HOST" -p 80 abc
+expect_reject "option used as a port value (-p -p)" "$HOST" -p -p
+expect_reject "option used as a port value (-p -h)" "$HOST" -p -h
 expect "closed port is counted closed" 1 0 1
 grep -q "is open" <<<"$OUT" \
     && fail "closed port prints nothing as open" "an 'is open' line was printed" \

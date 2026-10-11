@@ -381,7 +381,6 @@ static char  *check_opt(char *arg)
     }
     return strdup(option);
 }
-
 int help_opt(const char *arg, struct config *cfg) 
 {
     (void)arg;
