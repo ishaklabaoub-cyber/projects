@@ -211,8 +211,13 @@ int parse_args(int argc, char *argv[], struct config *cofg)
                     state &= 0;
                     state |= _RESUME;
                 }
+               
             }
-        
+            if((state & _RESUME) == _RESUME && (i + 1) < argc) {
+                  continue;
+            } else {
+             return 0;
+            }
         }
     } else{
         fprintf(stderr, "too few arguments.");
