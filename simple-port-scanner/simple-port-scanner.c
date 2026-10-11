@@ -175,8 +175,6 @@ int parse_args(int argc, char *argv[], struct config *cofg)
 
             if((state & _ERR) == _ERR) {
                 // error has occurred the program must exit
-                free(option);
-                option = NULL;
                 return -1;
             } else if((state & _WAIT) == _WAIT) {
                 /* program should wait for options:
@@ -204,7 +202,7 @@ int parse_args(int argc, char *argv[], struct config *cofg)
             if((state & _ERR) == _ERR) {
                 return -1;
             } else if ((state & _EXIT) == _EXIT) {
-                return 0;
+                return 1;
             } else {
                 if (cofg->input_addr == NULL) {
                     fprintf(stderr, "no IP address is given.\n");
@@ -405,7 +403,7 @@ int  port_ran(const char *arg, struct config *cfg)
         return 0;
     } else {
         if(isthere_digits(arg)) {
-            fprintf(stderr, "You did not pass a valid port numbers.\n");
+            fprintf(stderr, "You did not pass a valid port numbers '%s' (expected N or N-M, e.g. 80 or 20-80).\n",arg);
             return 1; 
         }
     }
@@ -428,6 +426,7 @@ int  port_ran(const char *arg, struct config *cfg)
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
+        str = NULL;
         return -1;
     }
 
@@ -450,9 +449,10 @@ int  port_ran(const char *arg, struct config *cfg)
         }
     } else if(i == 1){
         if((p_min = p_max = strtol(tokens[0], endptr, 10)) == 0) {
-            fprintf(stderr, "port_ran: passed an invalid port range.\n");
+            fprintf(stderr, "port_ran: passed an invalid port range '%s' (expected N or N-M, e.g. 80 or 20-80).\n", arg);
             fprintf(stderr, "Usage: --help or -h for Usage.\n");
             free(str);
+            str = NULL;
             return -1;
         }
         
@@ -461,6 +461,9 @@ int  port_ran(const char *arg, struct config *cfg)
         } else if(p_max > MAX_PORT){
             p_min = p_max = MAX_PORT;
         } 
+    } else { 
+        // an error occurred
+        return -1;
     }
     if(p_min > p_max) {
             long temp = p_min;
@@ -470,6 +473,7 @@ int  port_ran(const char *arg, struct config *cfg)
     cfg->port_min = p_min;
     cfg->port_max = p_max;
     free(str);
+    str = NULL;
     return 0;
 }
 
@@ -484,7 +488,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
     if(argv[0] == '-' && (isalpha(argv[1]) || argv[1] == '-')) {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
-                free(option);
+                // *option is already NULL does not need to be freed
                 return -1;
             }
             for(int i = 0;opt_prop[i].long_name != NULL; ++i) {     // check the option if it takes arguments
