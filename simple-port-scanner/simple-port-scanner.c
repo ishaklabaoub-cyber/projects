@@ -17,18 +17,14 @@
 #define MIN_PORT  1
 #define MAX_PORT  65535 
 
-/*
- * TODO: i think i should separate some concepts and functionalities in here into a header for
- * more organization.
- */
 
 enum port_state {
-    _OPEN      = 01,
-    _CLOSED    = 02,
-    _FILTERED  = 04,
-    _UNREACHABLE = 16,
-    _ERROR     = 32,
-    _UNDEFINED = 64
+    _OPEN      = 01,            // when an open port gets scanned
+    _CLOSED    = 02,            // when a closed port gets scanned 
+    _FILTERED  = 04,            // when a filtered port gets scanned
+    _UNREACHABLE = 16,          // for unreachable networks    
+    _ERROR     = 32,            // when error occurred
+    _UNDEFINED = 64             // undefined state, beyond(ENETUNREACH, ETIMEDOUT, ECONNREFUSED)
 };
 enum prog_state {
     _ERR    = 01,               // error occured must terminate the program
@@ -70,7 +66,7 @@ int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMEN
 option_entry opt_prop[3] = {                    /* returns values meanings: 1 -> program should exit , -1 -> error detected program must exit, 0 -> success */
 
     {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: --help or -h\n"},
-    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: --port -p <int> <int>\n"},
+    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: --port -p <int>,-<int>\n"},
     {NULL, 0, 0, NULL, NULL}
 
 };
@@ -96,6 +92,14 @@ int main(int argc, char *argv[])
     closed_count = 0;
     filtered_count = 0;
     unreachable_count = 0;
+    
+
+    if(cofg.port_max == 0 && cofg.port_min == 0) {
+        // if an IP address passed and nothing after it
+        fprintf(stderr, "No port range is set.\nSetting port range to [20,80].\n");
+        cofg.port_min = 20;
+        cofg.port_max = 80;
+    }
     for(long port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
@@ -135,6 +139,7 @@ int main(int argc, char *argv[])
 
 
     timespec_get(&end_time, TIME_UTC);
+    
     double time_taken = (end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
     
     long ports_scanned = cofg.port_max - cofg.port_min +1;
