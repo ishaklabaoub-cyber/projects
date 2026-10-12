@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
         cofg.port_min = 20;
         cofg.port_max = 80;
     }
+
     for(long port = cofg.port_min; port <= cofg.port_max; ++port){
 		
 		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
