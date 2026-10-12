@@ -16,7 +16,7 @@
 # Expected summary shape:  SUMMARY: ports scanned[3] , open ports[2], closed ports[1]
 # (a "filtered ports[N]" counter is optional until you add it)
 
-BIN=${BIN:-./scanner}
+BIN=${BIN:-./moscar}
 HOST=127.0.0.1
 
 SCANNED_LABEL="ports scanned"

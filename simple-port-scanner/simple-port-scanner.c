@@ -66,7 +66,7 @@ int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMEN
 option_entry opt_prop[3] = {                    /* returns values meanings: 1 -> program should exit , -1 -> error detected program must exit, 0 -> success */
 
     {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: --help or -h\n"},
-    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: --port -p <int>,-<int>\n"},
+    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: ./moscan <ipv4> [--port | -p] [N | N,M | N-M]\n"},
     {NULL, 0, 0, NULL, NULL}
 
 };
@@ -327,10 +327,10 @@ static int  isthere_digits(const char *arg)
     size_t len = strlen(arg);
     for(int i = 0; i < (int)len; ++i) {
         if(isdigit(arg[i])) {
-            return 0;
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
 int exec_opt(char *option, char *arg, struct config *cofg) 
@@ -398,7 +398,7 @@ int help_opt(const char *arg, struct config *cfg)
 {
     (void)arg;
     (void)cfg;
-    printf("\n\t\t***HELP is COMING***\nIshak's port scanner options:\n");
+    printf("\n\t\t Moscan's options:\n");
     for(int i = 0;opt_prop[i].description != NULL; ++i) {
         printf("%s", opt_prop[i].description);
     }
@@ -414,9 +414,9 @@ int  port_ran(const char *arg, struct config *cfg)
         cfg->port_max = 80;
         return 0;
     } else {
-        if(isthere_digits(arg)) {
+        if(!isthere_digits(arg)) {
             fprintf(stderr, "You did not pass a valid port numbers '%s' (expected N or N-M, e.g. 80 or 20-80).\n",arg);
-            return 1; 
+            return 0; 
         }
     }
    
