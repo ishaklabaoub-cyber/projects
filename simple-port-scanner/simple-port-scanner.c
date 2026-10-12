@@ -218,10 +218,8 @@ int parse_args(int argc, char *argv[], struct config *cofg)
                 }
                
             }
-            if((state & _RESUME) == _RESUME && (i + 1) < argc) {
+            if((state & _RESUME) == _RESUME ) {
                   continue;
-            } else {
-             return 0;
             }
         }
     } else{
