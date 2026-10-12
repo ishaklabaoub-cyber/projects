@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
     long ports_scanned = cofg.port_max - cofg.port_min +1;
 
     // SUMMARY
-    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d], filtered ports[%d], unreachable ports[%d] | time taken: [%.2lf s]\n", 
-                       ports_scanned, open_count, closed_count, filtered_count, unreachable_count,time_taken);
+    printf("\nSUMMARY: ports scanned[%ld] { open ports[%d], closed ports[%d], filtered ports[%d], unreachable ports[%d]} --> time taken: [%.2lf s]\n", 
+                       ports_scanned, open_count, closed_count, filtered_count, unreachable_count, time_taken);
 	return 0;
 }
 
@@ -171,6 +171,8 @@ int parse_args(int argc, char *argv[], struct config *cofg)
                 // parsing failed
                 state &= 0;
                 state |= _ERR;
+            } else {
+                state |= _WAIT;
             }
 
             if((state & _ERR) == _ERR) {
@@ -196,8 +198,11 @@ int parse_args(int argc, char *argv[], struct config *cofg)
                 } else {
                     state |= _RESUME;
                 }
+            } else {
+                // if never freed 
+                free(option);
+                option = NULL;
             }
-                
             // Deciding what the program should do
             if((state & _ERR) == _ERR) {
                 return -1;
@@ -333,7 +338,6 @@ int exec_opt(char *option, char *arg, struct config *cofg)
     }
     if(strlen(option) > 1){
        for(int i = 0;opt_prop[i].handler != NULL; ++i) {
-  
            if(strcmp(option,opt_prop[i].long_name) == 0) 
            {
                free(option);
