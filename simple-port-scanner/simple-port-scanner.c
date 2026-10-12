@@ -65,8 +65,8 @@ int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMEN
 // defining options and their properties
 option_entry opt_prop[3] = {                    /* returns values meanings: 1 -> program should exit , -1 -> error detected program must exit, 0 -> success */
 
-    {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: --help or -h\n"},
-    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: ./moscan <ipv4> [--port | -p] [N | N,M | N-M]\n"},
+    {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: ./moscar [--help | -h]\n"},
+    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: ./moscar <ipv4> [--port | -p] [N | N,M | N-M]\n"},
     {NULL, 0, 0, NULL, NULL}
 
 };
@@ -398,7 +398,7 @@ int help_opt(const char *arg, struct config *cfg)
 {
     (void)arg;
     (void)cfg;
-    printf("\n\t\t Moscan's options:\n");
+    printf("\n\t\t Moscar's options:\n");
     for(int i = 0;opt_prop[i].description != NULL; ++i) {
         printf("%s", opt_prop[i].description);
     }
