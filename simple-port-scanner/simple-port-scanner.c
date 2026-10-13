@@ -26,12 +26,14 @@ enum port_state {
     _ERROR     = 32,            // when error occurred
     _UNDEFINED = 64             // undefined state, beyond(ENETUNREACH, ETIMEDOUT, ECONNREFUSED)
 };
+
 enum prog_state {
     _ERR    = 01,               // error occured must terminate the program
     _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
     _WAIT   = 04,               // program should wait
     _RESUME = 16                // program should continue executing 
 };
+
 struct config {
     int takes_args;
     char *input_addr;
