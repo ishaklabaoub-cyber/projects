@@ -1,0 +1,6 @@
+moscar
+moscar_asan
+*.o
+a.out
+vgcore.*
+core

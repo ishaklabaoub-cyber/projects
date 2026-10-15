@@ -1,3 +1,4 @@
+#include <time.h>
 #include <limits.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -16,12 +17,17 @@
 #define MIN_PORT  1
 #define MAX_PORT  65535 
 
-/*
- * TODO: i think i should separate some concepts and functionalities in here into a header for
- * more organization.
- */
 
-enum prog_state{
+enum port_state {
+    _OPEN      = 01,            // when an open port gets scanned
+    _CLOSED    = 02,            // when a closed port gets scanned 
+    _FILTERED  = 04,            // when a filtered port gets scanned
+    _UNREACHABLE = 16,          // for unreachable networks    
+    _ERROR     = 32,            // when error occurred
+    _UNDEFINED = 64             // undefined state, beyond(ENETUNREACH, ETIMEDOUT, ECONNREFUSED)
+};
+
+enum prog_state {
     _ERR    = 01,               // error occured must terminate the program
     _EXIT   = 02,               // should exit the program due to an option like --help or -h(it should display exit)           
     _WAIT   = 04,               // program should wait
@@ -30,6 +36,7 @@ enum prog_state{
 
 struct config {
     int takes_args;
+    char *input_addr;
     long port_max;
     long port_min;
 };
@@ -42,24 +49,26 @@ typedef struct {
     char        short_name;     // 'h', 'p'
     int         takes_args;     // 0, 1
     opthandler  handler;        // option function
-    const char *description;    // used to generate the help text
+    const char  *description;   // used to generate the help text
 } option_entry;
 
 
 /****** UTILS FUNCTIONS *****/
+enum port_state scan_port(int , const char *, long);       // USED  FOR SCANNING PORTS
 static int  is_valid_ipv4(const char*);                    // CHECK FOR A VALID IPv4 ADDRESS
 static int  isthere_digits(const char*);                   // CHECK IF THERE IS DIGITS IN A STRING
 static char *check_opt(char *);                            // RETURN THE OPTION CHARACTER
 int         help_opt(const char *arg, struct config *cfg); // DISPLAYING OPTIONS
 int         port_ran(const char *arg, struct config *cfg); // SETTING PORT RANGE    
 int         parsing_func(char *,struct config *, char **); // PARSING THE CL ARGS
-int         exec_opt(char*, char*,struct config *);
+int         exec_opt(char*, char*,struct config *);        // EXECUTING OPTIONS
+int         parse_args(int , char* [], struct config *);   // PARSING CL ARGUMENTS
 
 // defining options and their properties
-option_entry opt_prop[3] = {
+option_entry opt_prop[3] = {                    /* returns values meanings: 1 -> program should exit , -1 -> error detected program must exit, 0 -> success */
 
-    {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: --help or -h\n"},
-    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: --port -p <int> <int>\n"},
+    {"-help", 'h', 0, &help_opt, "- Displaying options.\n. Usage: ./moscar [--help | -h]\n"},
+    {"-port", 'p', 1, &port_ran, "- Setting the port range needed to scan.\n. Usage: ./moscar <ipv4> [--port | -p] [N | N,M | N-M]\n"},
     {NULL, 0, 0, NULL, NULL}
 
 };
@@ -67,25 +76,96 @@ option_entry opt_prop[3] = {
 
 int main(int argc, char *argv[])
 {
-    int    open_count, closed_count;/* counters for how many ports are open or closed */    
+    int    open_count, closed_count, filtered_count, unreachable_count;    
+    enum   port_state p_state;
+    struct config cofg = { 0, NULL, 0L, 0L};
+	int    socket_fd;				        /* socket file descriptor */
+    struct timespec start_time,end_time;    /* for calculating proccess time */
+
+    timespec_get(&start_time, TIME_UTC);
+
+    if(parse_args(argc, argv, &cofg) != 0) {
+        // exit the program
+        return 1;
+    }
+
+    // initializing counters
+    open_count   = 0;
+    closed_count = 0;
+    filtered_count = 0;
+    unreachable_count = 0;
+    
+
+    if(cofg.port_max == 0 && cofg.port_min == 0) {
+        // if an IP address passed and nothing after it
+        fprintf(stderr, "No port range is set.\nSetting port range to [20,80].\n");
+        cofg.port_min = 20;
+        cofg.port_max = 80;
+    }
+
+    for(long port = cofg.port_min; port <= cofg.port_max; ++port){
+		
+		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
+		if(socket_fd == -1){
+			// socket() failed
+			perror("socket");
+			close(socket_fd);
+			continue;
+		}
+
+        p_state = scan_port(socket_fd, cofg.input_addr, port);
+        switch(p_state) {
+            case _OPEN:
+                printf("port %ld is open on %s\n", port, cofg.input_addr);
+                open_count++;
+                break;
+            case _CLOSED:
+                closed_count++;
+                break;
+            case _FILTERED:
+                filtered_count++;
+                break;
+            case _UNREACHABLE:
+                printf("Network is unreachable on port %ld\n", port);
+                unreachable_count++;
+                break;
+            case _UNDEFINED:
+			    printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
+                break;
+            case _ERROR:
+                return 1;
+            default:
+                fprintf(stderr, "INVALID PORT STATE.\n");
+                break;
+        }
+	}
+
+
+    timespec_get(&end_time, TIME_UTC);
+    
+    double time_taken = (end_time.tv_sec - start_time.tv_sec) + (double)(end_time.tv_nsec - start_time.tv_nsec) / 1000000000.0;
+    
+    long ports_scanned = cofg.port_max - cofg.port_min +1;
+
+    // SUMMARY
+    printf("\nSUMMARY: ports scanned[%ld] { open ports[%d], closed ports[%d], filtered ports[%d], unreachable ports[%d]} --> time taken: [%.2lf s]\n", 
+                       ports_scanned, open_count, closed_count, filtered_count, unreachable_count, time_taken);
+	return 0;
+}
+
+int parse_args(int argc, char *argv[], struct config *cofg)
+{
     int    func_ret,index;
     enum   prog_state state = _RESUME;
-    struct config cofg = { 0, 0L, 0L};
     char   *option = 0;
-	char   *input_addr = NULL;			    /* to store the ip address from the user */
-	int    socket_fd;				        /* socket file descriptor */
-	struct sockaddr_in addr;		        /* ip address */
-	struct pollfd pfd;			            /* for a non-blocking socket */
-	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
-	int    err;
-	socklen_t len = sizeof(err);
-	
+    
+    index = -1;
     if (argc >= 2) {
         for(int j = 0;j < argc; ++j) {
             if((func_ret = is_valid_ipv4(argv[j])) != 1) {
                 state |= _WAIT;
             } else if(func_ret == 1){
-                input_addr = argv[j];
+                cofg->input_addr = argv[j];
                 state |= _RESUME;
                 index = j;
                 break;
@@ -95,16 +175,16 @@ int main(int argc, char *argv[])
         for(int i = 1;i < argc; ++i) {
             if(i == index)continue;
         
-            if(parsing_func(argv[i], &cofg, &option) == -1){
+            if(parsing_func(argv[i], cofg, &option) == -1){
                 // parsing failed
                 state &= 0;
                 state |= _ERR;
+            } else {
+                state |= _WAIT;
             }
 
             if((state & _ERR) == _ERR) {
                 // error has occurred the program must exit
-                free(option);
-                option = NULL;
                 return -1;
             } else if((state & _WAIT) == _WAIT) {
                 /* program should wait for options:
@@ -114,7 +194,7 @@ int main(int argc, char *argv[])
                  */
 
                 /* if the option takes arguments pass the next CL argument */
-                func_ret = (cofg.takes_args) ? exec_opt(option, argv[++i], &cofg) : exec_opt(option, argv[i], &cofg);   
+                func_ret = (cofg->takes_args) ? exec_opt(option, argv[++i], cofg) : exec_opt(option, argv[i], cofg);   
                 
                 if(func_ret == 1) {
                     // the program needs to exit
@@ -126,123 +206,133 @@ int main(int argc, char *argv[])
                 } else {
                     state |= _RESUME;
                 }
+            } else {
+                // if never freed 
+                free(option);
+                option = NULL;
             }
-                
             // Deciding what the program should do
             if((state & _ERR) == _ERR) {
                 return -1;
             } else if ((state & _EXIT) == _EXIT) {
                 return 1;
             } else {
-                if (input_addr == NULL) {
-                    return 1;
+                if (cofg->input_addr == NULL) {
+                    fprintf(stderr, "no IP address is given.\n");
+                    return -1;
                 } else {
                     state &= 0;
                     state |= _RESUME;
                 }
+               
             }
-        
+            if((state & _RESUME) == _RESUME ) {
+                  continue;
+            }
         }
     } else{
         fprintf(stderr, "too few arguments.");
         printf("Usage: %s <ipaddr> ...\n", argv[0]);
         printf("For options: %s --help\n", argv[0]);
-        return 1;
+        return -1;
     }
 	
-	printf("%s is a valid IPv4 address.\n",input_addr);
+	printf("%s is a valid IPv4 address.\n", cofg->input_addr);
+    return 0;
+}
 
-    open_count   = 0;
-    closed_count = 0;
-    for(long int port = cofg.port_min; port <= cofg.port_max; ++port){
+enum port_state scan_port(int socket_fd,const char *input_addr,long port)
+{
+    struct sockaddr_in addr;		        /* ip address */
+	struct pollfd pfd;			            /* for a non-blocking socket */
+	int    expected_error = EINPROGRESS;	/* to identify that the connection is in progress */
+	int    err;   
+    socklen_t len = sizeof(err);
+    
+    addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);	
+	if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
+		fprintf(stderr,"INVALID IP ADDRESS : %s\n",input_addr);
+		perror("inet_pton");
+		close(socket_fd);
+    }
+    /***************** must add the poll() function for non-blocking sockets*******************/ 
+    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+    pfd.fd = socket_fd;	
+    pfd.events = POLLOUT;
+    pfd.revents = 0;
 		
-		socket_fd = socket(AF_INET,SOCK_STREAM,0);		/* creating an endpoint */
-		if(socket_fd == -1){
-			// socket() failed
-			perror("socket");
-			close(socket_fd);
-			continue;
-		}
-
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);	
-		if( inet_pton(AF_INET, input_addr, &addr.sin_addr) != 1){
-			fprintf(stderr,"INVALID IP ADDRESS : %s\n",input_addr);
-			perror("inet_pton");
-			close(socket_fd);
-		}
-
-		/***************** must add the poll() function for non-blocking sockets*******************/ 
-		fcntl(socket_fd, F_SETFL, O_NONBLOCK);
-		pfd.fd = socket_fd;	
-		pfd.events = POLLOUT;
-		pfd.revents = 0;
+    errno = 0;
+    int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		/* trying to connect */
 		
-		errno = 0;
-		int ret = connect(socket_fd, (struct sockaddr*)&addr, sizeof(struct sockaddr_in));		/* trying to connect */
-		
-		if(ret == -1){
-			int current_error = errno;
-			if(expected_error == current_error){	// connection in progress
+    if(ret == -1){
+        int current_error = errno;
+		if(current_error == expected_error){	// connection in progress
 
 				int return_val_poll = poll(&pfd, 1, 300);
 				if(pfd.revents & POLLOUT){	// the socket is writable and O_NONBLOCK must be set
 					
 					if(getsockopt(socket_fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1){
 						// getsockopt() failed
-						perror("getsockopt");
+                        perror("getsockopt");
+						close(socket_fd);
+                        return _ERROR;
 					} else{
+                        close(socket_fd);
 						if(err == 0){	// connection succeeded
-							printf("port %ld is open on %s\n", port, input_addr);
-                            open_count++;
+							return _OPEN;
 
 						} else if(err == ECONNREFUSED){ // connection refused
 							// closed port.
-                            closed_count++;
+                            return _CLOSED;
 						} else if(err == ETIMEDOUT){	// connection timed out
-							
-							printf("connection timed out on port %ld .\n", port);
+                            return _FILTERED;
 						} else if(err == ENETUNREACH){  // network unreachable
-							
-							printf("network is unreachable on port: %ld.\n", port);
+						    return _UNREACHABLE;	
 						} else{
-							printf("The error is beyond these errors( ENETUNREACH, ETIMEDOUT, ECONNREFUSED)\n");		
-						}
+						    return _UNDEFINED;
+                        }
 					}
 
 				} else if(pfd.revents & POLLERR){	//check if any errors occured in pfd.revents
-					
-					printf("error occured.\n");
-				
+                    fprintf(stderr, "error occured.\n");
+					close(socket_fd);
+                    return _ERROR;
 				} else if(return_val_poll == 0){	// the poll timeout ran out of time
-					printf("connection timeout on port %ld \n", port);
-				}
+				    close(socket_fd);
+                    return _FILTERED;
+                } else if(return_val_poll == -1){
+                    perror("poll");
+                    close(socket_fd);
+                    return _ERROR;
+                }
 			} else if(current_error == ECONNREFUSED){
-				printf("port %ld is closed on %s\n", port, input_addr);
-			} else{
-				perror("connect");
-			}		
-		} else{
-			// connection succeed
-			printf("port %ld is open on %s\n", port, input_addr);
-		}
-			close(socket_fd);
-	}
+                // closed port
+                close(socket_fd);
+                return _CLOSED;
+            } else if(current_error == ENETUNREACH){
+                // network unreachable
+                close(socket_fd);
+			    return _UNREACHABLE;
+            }	
+		} 
 
-    // SUMMARY
-    printf("\nSUMMARY: ports scanned[%ld] , open ports[%d], closed ports[%d]\n", cofg.port_max - cofg.port_min + 1, open_count, closed_count);
-	return 0;
+		// connection succeed
+		printf("port %ld is open on %s\n", port, input_addr);
+        close(socket_fd);
+        return _OPEN;
+    
 }
 
 static int  isthere_digits(const char *arg) 
 {
     size_t len = strlen(arg);
-    for(int i = 0; i < len; ++i) {
+    for(int i = 0; i < (int)len; ++i) {
         if(isdigit(arg[i])) {
-            return 0;
+            return 1;
         }
     }
-    return 1;
+    return 0;
 }
 
 int exec_opt(char *option, char *arg, struct config *cofg) 
@@ -254,7 +344,6 @@ int exec_opt(char *option, char *arg, struct config *cofg)
     }
     if(strlen(option) > 1){
        for(int i = 0;opt_prop[i].handler != NULL; ++i) {
-  
            if(strcmp(option,opt_prop[i].long_name) == 0) 
            {
                free(option);
@@ -307,10 +396,11 @@ static char  *check_opt(char *arg)
     }
     return strdup(option);
 }
-
 int help_opt(const char *arg, struct config *cfg) 
 {
-    printf("\n\t\t***HELP is COMING***\nIshak's port scanner options:\n");
+    (void)arg;
+    (void)cfg;
+    printf("\n\t\t Moscar's options:\n");
     for(int i = 0;opt_prop[i].description != NULL; ++i) {
         printf("%s", opt_prop[i].description);
     }
@@ -326,9 +416,9 @@ int  port_ran(const char *arg, struct config *cfg)
         cfg->port_max = 80;
         return 0;
     } else {
-        if(isthere_digits(arg)) {
-            fprintf(stderr, "You did not pass a valid port numbers.\n");
-            return 1; 
+        if(!isthere_digits(arg)) {
+            fprintf(stderr, "You did not pass a valid port numbers '%s' (expected N or N-M, e.g. 80 or 20-80).\n",arg);
+            return -1; 
         }
     }
    
@@ -350,6 +440,7 @@ int  port_ran(const char *arg, struct config *cfg)
     if(i > 2) {
         fprintf(stderr, "too many port numbers.\nUsage: -p or --port int,int\n");
         free(str);
+        str = NULL;
         return -1;
     }
 
@@ -358,7 +449,9 @@ int  port_ran(const char *arg, struct config *cfg)
         if(strtol(tokens[j], endptr, 10) == LONG_MAX ||
            strtol(tokens[j], endptr, 10) == LONG_MIN ||   
            strtol(tokens[j], endptr, 10) == 0      ) {
-                return -1;
+            free(str);
+            str = NULL;
+            return -1;
         }
     }
     if(i == 2){
@@ -372,9 +465,10 @@ int  port_ran(const char *arg, struct config *cfg)
         }
     } else if(i == 1){
         if((p_min = p_max = strtol(tokens[0], endptr, 10)) == 0) {
-            fprintf(stderr, "port_ran: passed an invalid port range.\n");
+            fprintf(stderr, "port_ran: passed an invalid port range '%s' (expected N or N-M, e.g. 80 or 20-80).\n", arg);
             fprintf(stderr, "Usage: --help or -h for Usage.\n");
             free(str);
+            str = NULL;
             return -1;
         }
         
@@ -383,6 +477,11 @@ int  port_ran(const char *arg, struct config *cfg)
         } else if(p_max > MAX_PORT){
             p_min = p_max = MAX_PORT;
         } 
+    } else { 
+        // an error occurred
+        free(str);
+        str = NULL;
+        return -1;
     }
     if(p_min > p_max) {
             long temp = p_min;
@@ -392,6 +491,7 @@ int  port_ran(const char *arg, struct config *cfg)
     cfg->port_min = p_min;
     cfg->port_max = p_max;
     free(str);
+    str = NULL;
     return 0;
 }
 
@@ -406,7 +506,7 @@ int parsing_func(char *argv, struct config *cofg, char **option)
     if(argv[0] == '-' && (isalpha(argv[1]) || argv[1] == '-')) {
             if((*option = check_opt(argv)) == NULL) {
                 fprintf(stderr, "Invalid option.\n");
-                free(option);
+                // *option is already NULL does not need to be freed
                 return -1;
             }
             for(int i = 0;opt_prop[i].long_name != NULL; ++i) {     // check the option if it takes arguments
