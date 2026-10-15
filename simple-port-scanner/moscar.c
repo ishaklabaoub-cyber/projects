@@ -418,7 +418,7 @@ int  port_ran(const char *arg, struct config *cfg)
     } else {
         if(!isthere_digits(arg)) {
             fprintf(stderr, "You did not pass a valid port numbers '%s' (expected N or N-M, e.g. 80 or 20-80).\n",arg);
-            return 0; 
+            return -1; 
         }
     }
    
@@ -449,7 +449,9 @@ int  port_ran(const char *arg, struct config *cfg)
         if(strtol(tokens[j], endptr, 10) == LONG_MAX ||
            strtol(tokens[j], endptr, 10) == LONG_MIN ||   
            strtol(tokens[j], endptr, 10) == 0      ) {
-                return -1;
+            free(str);
+            str = NULL;
+            return -1;
         }
     }
     if(i == 2){
@@ -477,6 +479,8 @@ int  port_ran(const char *arg, struct config *cfg)
         } 
     } else { 
         // an error occurred
+        free(str);
+        str = NULL;
         return -1;
     }
     if(p_min > p_max) {
