@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <sys/poll.h>
 
-#define TOK_DELIM " ,-"
+#define TOK_DELIM " -"
 #define MAX_CAP   100
 #define MIN_PORT  1
 #define MAX_PORT  65535 
@@ -257,7 +257,9 @@ enum port_state scan_port(int socket_fd,const char *input_addr,long port)
 		close(socket_fd);
     }
     /***************** must add the poll() function for non-blocking sockets*******************/ 
-    fcntl(socket_fd, F_SETFL, O_NONBLOCK);
+    if(fcntl(socket_fd, F_SETFL, O_NONBLOCK) == -1) {
+        perror("fcntl");
+    }
     pfd.fd = socket_fd;	
     pfd.events = POLLOUT;
     pfd.revents = 0;
